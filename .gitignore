@@ -23,7 +23,9 @@ env/
 .ipynb_checkpoints/
 
 # Data (large files)
-data/
+/data/
+!/src/data/
+!/src/data/**
 *.h5
 *.hdf5
 *.edf
@@ -34,6 +36,9 @@ data/
 outputs/
 checkpoints/
 test_ckpts/
+**/best_model.pt
+**/best_model_*.pt
+**/best_model-*.pt
 wandb/
 results/
 figures/
