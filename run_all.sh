@@ -111,11 +111,6 @@ if [ "$START_STEP" -le 0 ]; then
     run_cmd pip install --upgrade pip
     run_cmd pip install torch>=2.7.0 torchaudio>=2.7.0 --index-url https://download.pytorch.org/whl/cu128
 
-    # flash-attn (optional perf boost — okay if it fails)
-    pip install flash-attn --no-build-isolation 2>/dev/null \
-        && echo "flash-attn: installed" \
-        || echo "[info] flash-attn skipped (will use SDPA — this is fine)"
-
     # Verify GPU
     python3 -c "
 import torch
