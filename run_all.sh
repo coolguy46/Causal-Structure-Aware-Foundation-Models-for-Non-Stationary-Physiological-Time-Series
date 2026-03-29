@@ -39,8 +39,9 @@ RESULTS_DIR="/workspace/results"
 SEEDS="42,123,7"
 DATASETS="sleep_edf,chbmit,ptbxl"
 
-# Ensure src is importable
-export PYTHONPATH="$REPO_DIR:${PYTHONPATH:-}"
+# Ensure project modules are importable in mixed launch contexts.
+# Put repo and repo/src first to avoid external package shadowing.
+export PYTHONPATH="$REPO_DIR:$REPO_DIR/src:${PYTHONPATH:-}"
 
 # Parse arguments
 START_STEP=0
@@ -139,8 +140,8 @@ if [ "$START_STEP" -le 1 ]; then
     run_cmd pip install torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-$(python3 -c "import torch; print(torch.__version__.split('+')[0])")+cu128.html
     run_cmd pip install jupyterlab nbconvert
 
-    # Quick import check
-    python3 -c "from src.train import build_model; print('Project imports: OK')"
+    # Quick import check (includes the previously failing src.data path).
+    python3 -c "import src; from src.data.eeg_dataset import EEGDataset; from src.train import build_model; print('Project imports: OK')"
 
     echo "[STEP 1] Done"
 fi

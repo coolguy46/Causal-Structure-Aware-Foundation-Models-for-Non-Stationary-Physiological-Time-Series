@@ -28,10 +28,18 @@ try:
 except ModuleNotFoundError as exc:
     if not exc.name or not exc.name.startswith("src"):
         raise
-    # Allow `python src/train.py` by adding the project root to sys.path.
+    # Recover from path issues and from third-party `src` module shadowing.
     project_root = Path(__file__).resolve().parents[1]
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
+    src_root = Path(__file__).resolve().parent
+    for path in (str(project_root), str(src_root)):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    # If another package named `src` was imported first, retry with a clean slate.
+    for mod_name in list(sys.modules):
+        if mod_name == "src" or mod_name.startswith("src."):
+            sys.modules.pop(mod_name, None)
+
     try:
         from src.data.eeg_dataset import EEGDataset
         from src.data.ecg_dataset import ECGDataset
