@@ -2,6 +2,7 @@
 import logging
 import os
 import random
+import sys
 from pathlib import Path
 
 import hydra
@@ -14,13 +15,28 @@ from tqdm import tqdm
 
 import wandb
 
-from src.data.eeg_dataset import EEGDataset
-from src.data.ecg_dataset import ECGDataset
-from src.model.full_model import CausalBiosignalModel
-from src.loss.spectral_loss import spectral_reconstruction_loss
-from src.loss.causal_loss import causal_consistency_loss
-from src.loss.task_loss import classification_loss, joint_loss
-from src.eval.benchmark import evaluate_model
+try:
+    from src.data.eeg_dataset import EEGDataset
+    from src.data.ecg_dataset import ECGDataset
+    from src.model.full_model import CausalBiosignalModel
+    from src.loss.spectral_loss import spectral_reconstruction_loss
+    from src.loss.causal_loss import causal_consistency_loss
+    from src.loss.task_loss import classification_loss, joint_loss
+    from src.eval.benchmark import evaluate_model
+except ModuleNotFoundError as exc:
+    if exc.name != "src":
+        raise
+    # Allow `python src/train.py` by adding the project root to sys.path.
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    from src.data.eeg_dataset import EEGDataset
+    from src.data.ecg_dataset import ECGDataset
+    from src.model.full_model import CausalBiosignalModel
+    from src.loss.spectral_loss import spectral_reconstruction_loss
+    from src.loss.causal_loss import causal_consistency_loss
+    from src.loss.task_loss import classification_loss, joint_loss
+    from src.eval.benchmark import evaluate_model
 
 logger = logging.getLogger(__name__)
 
