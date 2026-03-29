@@ -33,6 +33,7 @@ data/
 # Outputs
 outputs/
 checkpoints/
+test_ckpts/
 wandb/
 results/
 figures/
