@@ -24,7 +24,7 @@ try:
     from src.loss.task_loss import classification_loss, joint_loss
     from src.eval.benchmark import evaluate_model
 except ModuleNotFoundError as exc:
-    if exc.name != "src":
+    if not exc.name or not exc.name.startswith("src"):
         raise
     # Allow `python src/train.py` by adding the project root to sys.path.
     project_root = Path(__file__).resolve().parents[1]
