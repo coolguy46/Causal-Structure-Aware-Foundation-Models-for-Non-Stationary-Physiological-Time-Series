@@ -15,6 +15,8 @@ from tqdm import tqdm
 
 import wandb
 
+USE_LOCAL_IMPORTS = False
+
 try:
     from src.data.eeg_dataset import EEGDataset
     from src.data.ecg_dataset import ECGDataset
@@ -30,13 +32,24 @@ except ModuleNotFoundError as exc:
     project_root = Path(__file__).resolve().parents[1]
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    from src.data.eeg_dataset import EEGDataset
-    from src.data.ecg_dataset import ECGDataset
-    from src.model.full_model import CausalBiosignalModel
-    from src.loss.spectral_loss import spectral_reconstruction_loss
-    from src.loss.causal_loss import causal_consistency_loss
-    from src.loss.task_loss import classification_loss, joint_loss
-    from src.eval.benchmark import evaluate_model
+    try:
+        from src.data.eeg_dataset import EEGDataset
+        from src.data.ecg_dataset import ECGDataset
+        from src.model.full_model import CausalBiosignalModel
+        from src.loss.spectral_loss import spectral_reconstruction_loss
+        from src.loss.causal_loss import causal_consistency_loss
+        from src.loss.task_loss import classification_loss, joint_loss
+        from src.eval.benchmark import evaluate_model
+    except ModuleNotFoundError:
+        # Fallback for environments where only /path/to/repo/src is on sys.path.
+        USE_LOCAL_IMPORTS = True
+        from data.eeg_dataset import EEGDataset
+        from data.ecg_dataset import ECGDataset
+        from model.full_model import CausalBiosignalModel
+        from loss.spectral_loss import spectral_reconstruction_loss
+        from loss.causal_loss import causal_consistency_loss
+        from loss.task_loss import classification_loss, joint_loss
+        from eval.benchmark import evaluate_model
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +87,22 @@ def build_model(cfg: DictConfig) -> nn.Module:
     if model_class == "causal":
         return _build_causal_model(cfg)
 
-    from src.model.baselines import (
-        PatchTSTBaseline,
-        StaticGNNBaseline,
-        CorrelationGraphBaseline,
-        VanillaTransformerBaseline,
-        RawWaveformBaseline,
-    )
+    if USE_LOCAL_IMPORTS:
+        from model.baselines import (
+            PatchTSTBaseline,
+            StaticGNNBaseline,
+            CorrelationGraphBaseline,
+            VanillaTransformerBaseline,
+            RawWaveformBaseline,
+        )
+    else:
+        from src.model.baselines import (
+            PatchTSTBaseline,
+            StaticGNNBaseline,
+            CorrelationGraphBaseline,
+            VanillaTransformerBaseline,
+            RawWaveformBaseline,
+        )
 
     common = dict(
         n_channels=cfg.dataset.channels,
