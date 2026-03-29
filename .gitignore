@@ -19,17 +19,26 @@ env/
 *.swp
 *.swo
 
+# Jupyter
+.ipynb_checkpoints/
+
 # Data (large files)
 data/
 *.h5
 *.hdf5
 *.edf
 *.dat
+*.csv
 
 # Outputs
 outputs/
 checkpoints/
 wandb/
+results/
+figures/
+
+# Secrets
+.env
 
 # OS
 .DS_Store
