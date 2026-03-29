@@ -140,6 +140,19 @@ if [ "$START_STEP" -le 1 ]; then
     run_cmd pip install torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-$(python3 -c "import torch; print(torch.__version__.split('+')[0])")+cu128.html
     run_cmd pip install jupyterlab nbconvert
 
+    # Source-tree preflight (common failure on partial/sparse checkouts).
+    if [ ! -f "$REPO_DIR/src/__init__.py" ] || [ ! -d "$REPO_DIR/src/data" ] || [ ! -f "$REPO_DIR/src/data/eeg_dataset.py" ]; then
+        echo "[error] Required source package files are missing in this checkout."
+        echo "[error] Expected: src/__init__.py, src/data/, src/data/eeg_dataset.py"
+        echo "[error] repo: $REPO_DIR"
+        echo "[error] Found under src/:"
+        ls -la "$REPO_DIR/src" || true
+        echo "[error] Found under src/data/:"
+        ls -la "$REPO_DIR/src/data" || true
+        echo "[hint] Re-clone or sync the full repository in /workspace and rerun."
+        exit 1
+    fi
+
     # Quick import check with diagnostics when module resolution fails.
     if [ "$DRY_RUN" = true ]; then
         echo "[dry-run] python3 import smoke test (src, src.data, src.train)"
