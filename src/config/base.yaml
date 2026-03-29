@@ -1,0 +1,39 @@
+defaults:
+  - dataset: sleep_edf
+  - model: default
+  - loss: default
+  - _self_
+
+seed: 42
+num_workers: 4
+
+train:
+  epochs: 60
+  batch_size: 64
+  lr: 3e-4
+  weight_decay: 1e-5
+  warmup_epochs: 3
+  max_grad_norm: 1.0
+  accumulate_grad_batches: 1
+  early_stopping_patience: 10
+  scheduler: cosine
+
+eval:
+  batch_size: 64
+  metrics: [f1_macro, auroc, ece]
+
+wandb:
+  project: causal-biosignal-fm
+  entity: null
+  mode: online  # set to "disabled" for debugging
+
+paths:
+  data_root: /workspace/data
+  output_dir: /workspace/outputs
+  checkpoint_dir: /workspace/checkpoints
+
+hardware:
+  gpus: 1
+  precision: bf16-mixed  # bf16 native on 5090/A100, faster than fp16
+  compile: true  # torch.compile
+  compile_mode: reduce-overhead

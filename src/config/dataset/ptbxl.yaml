@@ -1,0 +1,13 @@
+name: ptbxl
+type: ecg
+path: ${paths.data_root}/ptbxl
+sample_rate: 500
+channels: 12  # standard 12-lead ECG
+window_sec: 2.0
+window_samples: 1000  # 500 * 2
+stride_sec: 2.0
+bandpass_low: 0.5
+bandpass_high: 40.0
+num_classes: 5  # NORM, MI, STTC, CD, HYP (superclasses)
+task: classification
+split_file: ${paths.data_root}/ptbxl/splits.json

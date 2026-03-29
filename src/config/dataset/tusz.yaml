@@ -1,0 +1,13 @@
+name: tusz
+type: eeg
+path: ${paths.data_root}/tusz
+sample_rate: 256
+channels: 19  # 10-20 system
+window_sec: 2.0
+window_samples: 512  # 256 * 2
+stride_sec: 1.0
+bandpass_low: 0.5
+bandpass_high: 50.0
+num_classes: 2  # seizure / non-seizure
+task: classification
+split_file: ${paths.data_root}/tusz/splits.json

@@ -1,0 +1,13 @@
+name: sleep_edf
+type: eeg
+path: ${paths.data_root}/sleep_edf
+sample_rate: 100
+channels: 2  # Fpz-Cz, Pz-Oz
+window_sec: 30.0
+window_samples: 3000  # 100 * 30
+stride_sec: 30.0
+bandpass_low: 0.3
+bandpass_high: 35.0
+num_classes: 5  # W, N1, N2, N3, REM
+task: classification
+split_file: ${paths.data_root}/sleep_edf/splits.json

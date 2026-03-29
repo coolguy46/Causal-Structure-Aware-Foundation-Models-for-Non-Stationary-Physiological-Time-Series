@@ -1,0 +1,41 @@
+model_class: patchtst
+d_token: 128
+n_bands: 5
+
+tokenizer:
+  stft_n_fft: 256
+  stft_hop_length: 64
+  stft_win_length: 256
+  bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 13.0]
+    beta: [13.0, 30.0]
+    gamma: [30.0, 50.0]
+
+graph:
+  n_layers: 2
+  n_heads: 4
+  d_model: ${..d_token}
+  dropout: 0.1
+  sparsity_threshold: 0.5
+  l1_lambda: 0.01
+  dag_constraint: true
+
+transformer:
+  n_layers: 6
+  n_heads: 8
+  d_model: ${..d_token}
+  d_ff: 512
+  dropout: 0.1
+  max_seq_len: 1024
+  gradient_checkpointing: false
+
+adapter:
+  hidden_dim: 64
+  n_layers: 2
+  residual: true
+
+classifier:
+  hidden_dim: 256
+  dropout: 0.3
