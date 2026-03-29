@@ -39,6 +39,9 @@ RESULTS_DIR="/workspace/results"
 SEEDS="42,123,7"
 DATASETS="sleep_edf,chbmit,ptbxl"
 
+# Ensure src is importable
+export PYTHONPATH="$REPO_DIR:${PYTHONPATH:-}"
+
 # Parse arguments
 START_STEP=0
 USE_SYNTHETIC=false
