@@ -140,8 +140,37 @@ if [ "$START_STEP" -le 1 ]; then
     run_cmd pip install torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-$(python3 -c "import torch; print(torch.__version__.split('+')[0])")+cu128.html
     run_cmd pip install jupyterlab nbconvert
 
-    # Quick import check (includes the previously failing src.data path).
-    python3 -c "import src; from src.data.eeg_dataset import EEGDataset; from src.train import build_model; print('Project imports: OK')"
+    # Quick import check with diagnostics when module resolution fails.
+    if [ "$DRY_RUN" = true ]; then
+        echo "[dry-run] python3 import smoke test (src, src.data, src.train)"
+    else
+        python3 - <<'PY'
+import importlib.util
+import os
+import sys
+import traceback
+
+print("[import-check] cwd:", os.getcwd())
+print("[import-check] PYTHONPATH:", os.environ.get("PYTHONPATH", "<unset>"))
+print("[import-check] sys.path (first 8):")
+for p in sys.path[:8]:
+    print("  -", p)
+
+try:
+    import src
+    print("[import-check] src module:", getattr(src, "__file__", "<namespace>"))
+except Exception:
+    print("[import-check] failed to import src")
+    traceback.print_exc()
+
+data_spec = importlib.util.find_spec("src.data")
+print("[import-check] find_spec('src.data'):", data_spec)
+
+from src.data.eeg_dataset import EEGDataset
+from src.train import build_model
+print("Project imports: OK")
+PY
+    fi
 
     echo "[STEP 1] Done"
 fi
