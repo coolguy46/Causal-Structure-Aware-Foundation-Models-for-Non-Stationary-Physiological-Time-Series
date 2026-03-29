@@ -11,7 +11,7 @@
 #
 #  Steps:
 #    0  Environment setup (apt, pip, CUDA verification)
-#    1  Clone project repository
+#    1  Install dependencies (pip)
 #    2  Data acquisition (download or synthetic)
 #    3  Preprocessing (raw → HDF5)
 #    4  Sanity check (3-epoch smoke test)
@@ -31,8 +31,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-REPO_URL="https://github.com/coolguy46/Causal-Structure-Aware-Foundation-Models-for-Non-Stationary-Physiological-Time-Series.git"
-REPO_DIR="/workspace/causal-biosignal-fm"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="/workspace/data"
 CKPT_DIR="/workspace/checkpoints"
 OUTPUT_DIR="/workspace/outputs"
@@ -129,17 +128,12 @@ fi
 
 # ============================= STEP 1 =====================================
 if [ "$START_STEP" -le 1 ]; then
-    step_header 1 "CLONE PROJECT"
-
-    if [ -d "$REPO_DIR/.git" ]; then
-        echo "Repo already exists at $REPO_DIR — pulling latest..."
-        cd "$REPO_DIR" && run_cmd git pull
-    else
-        run_cmd git clone "$REPO_URL" "$REPO_DIR"
-    fi
+    step_header 1 "INSTALL DEPENDENCIES"
 
     cd "$REPO_DIR"
     run_cmd pip install -r requirements.txt
+    # torch_scatter/torch_sparse need torch already installed — install separately
+    run_cmd pip install torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-$(python3 -c "import torch; print(torch.__version__.split('+')[0])")+cu128.html
     run_cmd pip install jupyterlab nbconvert
 
     # Quick import check
