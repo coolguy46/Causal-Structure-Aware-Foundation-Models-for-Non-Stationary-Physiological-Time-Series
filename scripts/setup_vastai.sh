@@ -23,7 +23,7 @@ mkdir -p /workspace/data/{sleep_edf,chbmit,ptbxl}
 cd /workspace
 if [ ! -d "causal-biosignal-fm" ]; then
     echo "Clone your project repo here:"
-    echo "  git clone https://github.com/YOUR_USERNAME/causal-biosignal-fm.git"
+    echo "  git clone https://github.com/coolguy46/Causal-Structure-Aware-Foundation-Models-for-Non-Stationary-Physiological-Time-Series.git"
     echo "Or upload files via scp/rsync."
 fi
 

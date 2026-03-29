@@ -28,6 +28,22 @@ ABLATION_CONFIGS = {
     "win_1s": "dataset.window_sec=1.0 dataset.window_samples=100",
     "win_2s": "dataset.window_sec=2.0 dataset.window_samples=200",
     "win_4s": "dataset.window_sec=4.0 dataset.window_samples=400",
+
+    # Band ablation — tests spectral tokenizer contribution
+    "band_delta_only": 'model.tokenizer.bands={delta:[0.5,4.0]} model.n_bands=1',
+    "band_theta_only": 'model.tokenizer.bands={theta:[4.0,8.0]} model.n_bands=1',
+    "band_alpha_only": 'model.tokenizer.bands={alpha:[8.0,13.0]} model.n_bands=1',
+    "band_beta_only": 'model.tokenizer.bands={beta:[13.0,30.0]} model.n_bands=1',
+    "band_gamma_only": 'model.tokenizer.bands={gamma:[30.0,50.0]} model.n_bands=1',
+    "band_low": 'model.tokenizer.bands={delta:[0.5,4.0],theta:[4.0,8.0],alpha:[8.0,13.0]} model.n_bands=3',
+    "band_high": 'model.tokenizer.bands={beta:[13.0,30.0],gamma:[30.0,50.0]} model.n_bands=2',
+    "band_all": 'model.tokenizer.bands={delta:[0.5,4.0],theta:[4.0,8.0],alpha:[8.0,13.0],beta:[13.0,30.0],gamma:[30.0,50.0]} model.n_bands=5',
+
+    # Graph sparsity sweep — tests sparsification threshold / L1 strength
+    "sparsity_0.001": "model.graph.l1_lambda=0.001 model.graph.sparsity_threshold=0.3",
+    "sparsity_0.01": "model.graph.l1_lambda=0.01 model.graph.sparsity_threshold=0.5",
+    "sparsity_0.1": "model.graph.l1_lambda=0.1 model.graph.sparsity_threshold=0.7",
+    "sparsity_0.5": "model.graph.l1_lambda=0.5 model.graph.sparsity_threshold=0.9",
 }
 
 
@@ -61,7 +77,10 @@ if __name__ == "__main__":
         "--sweeps",
         nargs="+",
         default=["all"],
-        choices=list(ABLATION_CONFIGS.keys()) + ["loss_ablation", "lambda_sweep", "token_dim", "window_size"],
+        choices=list(ABLATION_CONFIGS.keys()) + [
+            "loss_ablation", "lambda_sweep", "token_dim", "window_size",
+            "band_ablation", "graph_sparsity",
+        ],
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[42, 123, 7])
     args = parser.parse_args()
@@ -72,6 +91,12 @@ if __name__ == "__main__":
         "lambda_sweep": ["lambda_0.01", "lambda_0.1", "lambda_0.5", "lambda_1.0"],
         "token_dim": ["d64", "d128", "d256"],
         "window_size": ["win_1s", "win_2s", "win_4s"],
+        "band_ablation": [
+            "band_delta_only", "band_theta_only", "band_alpha_only",
+            "band_beta_only", "band_gamma_only",
+            "band_low", "band_high", "band_all",
+        ],
+        "graph_sparsity": ["sparsity_0.001", "sparsity_0.01", "sparsity_0.1", "sparsity_0.5"],
     }
 
     sweeps = []
