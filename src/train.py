@@ -336,12 +336,15 @@ def main(cfg: DictConfig):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
-    # W&B
+    # W&B — reinit=True for Hydra multirun (separate run per job)
+    if wandb.run is not None:
+        wandb.finish()
     wandb.init(
         project=cfg.wandb.project,
         entity=cfg.wandb.entity,
         config=OmegaConf.to_container(cfg, resolve=True),
         mode=cfg.wandb.mode,
+        reinit=True,
     )
 
     # Data
@@ -401,9 +404,10 @@ def main(cfg: DictConfig):
 
     # Model
     model = build_model(cfg)
+    model = model.to(device)
+    # torch.compile after .to(device) — avoids inductor issues with complex STFT kernels
     if cfg.hardware.compile:
         model = torch.compile(model, mode=cfg.hardware.compile_mode)
-    model = model.to(device)
 
     param_count = sum(p.numel() for p in model.parameters())
     logger.info(f"Model parameters: {param_count:,}")

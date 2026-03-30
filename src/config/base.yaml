@@ -35,5 +35,5 @@ paths:
 hardware:
   gpus: 1
   precision: bf16-mixed  # bf16 native on 5090/A100, faster than fp16
-  compile: true  # torch.compile
+  compile: false  # disable torch.compile — inductor has issues with complex STFT ops
   compile_mode: reduce-overhead
