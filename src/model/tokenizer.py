@@ -34,6 +34,7 @@ class SpectralTokenizer(nn.Module):
         win_length: int = 256,
         sample_rate: float = 125.0,
         bands: Optional[dict[str, tuple[float, float]]] = None,
+        n_temporal_pools: int = 1,
     ):
         super().__init__()
         self.n_channels = n_channels
@@ -44,6 +45,7 @@ class SpectralTokenizer(nn.Module):
         self.sample_rate = sample_rate
         self.bands = bands or self.PHYSIOLOGICAL_BANDS
         self.n_bands = len(self.bands)
+        self.n_temporal_pools = n_temporal_pools
 
         # Compute frequency bin indices for each band
         freqs = torch.linspace(0, sample_rate / 2, n_fft // 2 + 1)
@@ -68,6 +70,10 @@ class SpectralTokenizer(nn.Module):
         # Positional embeddings: channel ID + band ID
         self.channel_emb = nn.Embedding(n_channels, d_token)
         self.band_emb = nn.Embedding(self.n_bands, d_token)
+
+        # Temporal position embeddings (when keeping multiple time pools)
+        if n_temporal_pools > 1:
+            self.temporal_emb = nn.Embedding(n_temporal_pools, d_token)
 
         # Register band masks as buffers
         for i, (name, mask) in enumerate(self.band_masks.items()):
@@ -106,38 +112,48 @@ class SpectralTokenizer(nn.Module):
         # Magnitude spectrogram: (B*C, n_freq, n_frames)
         mag = spec.abs()
 
-        # Average over time frames: (B*C, n_freq)
-        mag_avg = mag.mean(dim=-1)
+        # Pool time frames
+        if self.n_temporal_pools > 1:
+            # Keep multiple temporal buckets via adaptive average pooling
+            mag_pooled = F.adaptive_avg_pool1d(mag, self.n_temporal_pools)
+        else:
+            # Average all time frames (original behavior)
+            mag_pooled = mag.mean(dim=-1, keepdim=True)  # (B*C, n_freq, 1)
 
-        # Reshape: (B, C, n_freq)
-        mag_avg = mag_avg.reshape(B, C, -1)
+        n_tp = mag_pooled.shape[-1]
+        # (B, C, n_freq, n_tp)
+        mag_pooled = mag_pooled.reshape(B, C, -1, n_tp)
 
         # Extract per-band tokens
         tokens_list = []
         for band_idx, (name, _) in enumerate(self.bands.items()):
             mask = getattr(self, f"mask_{name}").to(device)
-            # (B, C, n_band_bins)
-            band_feat = mag_avg[:, :, mask]
-            # Project: (B, C, d_token)
+            # (B, C, n_bins, n_tp) -> (B, C, n_tp, n_bins)
+            band_feat = mag_pooled[:, :, mask, :].permute(0, 1, 3, 2)
+            # Project: (B, C, n_tp, d_token)
             band_token = self.band_proj[name](band_feat)
 
             # Add positional embeddings
             ch_ids = torch.arange(C, device=device)
             band_id = torch.tensor(band_idx, device=device)
-            band_token = band_token + self.channel_emb(ch_ids).unsqueeze(0)
+            band_token = band_token + self.channel_emb(ch_ids)[None, :, None, :]
             band_token = band_token + self.band_emb(band_id)
+
+            if self.n_temporal_pools > 1:
+                temp_ids = torch.arange(n_tp, device=device)
+                band_token = band_token + self.temporal_emb(temp_ids)[None, None, :, :]
 
             tokens_list.append(band_token)
 
-        # Stack: (B, C, n_bands, d_token) -> (B, C*n_bands, d_token)
-        tokens = torch.stack(tokens_list, dim=2)  # (B, C, n_bands, d_token)
-        tokens = tokens.reshape(B, C * self.n_bands, self.d_token)
+        # Stack: (B, C, n_bands, n_tp, d_token) -> (B, C*n_bands*n_tp, d_token)
+        tokens = torch.stack(tokens_list, dim=2)  # (B, C, n_bands, n_tp, d_token)
+        tokens = tokens.reshape(B, C * self.n_bands * n_tp, self.d_token)
 
         return tokens
 
     @property
     def n_tokens(self) -> int:
-        return self.n_channels * self.n_bands
+        return self.n_channels * self.n_bands * self.n_temporal_pools
 
 
 class TokenDecoder(nn.Module):

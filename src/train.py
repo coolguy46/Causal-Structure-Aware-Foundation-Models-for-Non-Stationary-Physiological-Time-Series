@@ -172,6 +172,7 @@ def _build_causal_model(cfg: DictConfig) -> CausalBiosignalModel:
         hop_length=cfg.model.tokenizer.stft_hop_length,
         win_length=cfg.model.tokenizer.stft_win_length,
         bands=bands,
+        n_temporal_pools=getattr(cfg.model.tokenizer, "n_temporal_pools", 1),
         graph_n_layers=cfg.model.graph.n_layers,
         graph_n_heads=cfg.model.graph.n_heads,
         graph_dropout=cfg.model.graph.dropout,
@@ -207,6 +208,7 @@ def train_one_epoch(
     n_batches = 0
 
     is_causal = getattr(cfg.model, "model_class", "causal") == "causal"
+    accum_steps = getattr(cfg.train, "accumulate_grad_batches", 1)
 
     # Causal loss is expensive (extra transformer passes). Compute every K steps
     # to save ~60-80% wall time with negligible quality impact.
@@ -218,7 +220,9 @@ def train_one_epoch(
         signal = batch["signal"].to(device, non_blocking=True)  # (B, C, T)
         label = batch["label"].to(device, non_blocking=True)    # (B,)
 
-        optimizer.zero_grad()
+        # Only zero grads at accumulation boundaries
+        if batch_idx % accum_steps == 0:
+            optimizer.zero_grad()
 
         if "bf16" in cfg.hardware.precision:
             dtype = torch.bfloat16
@@ -283,18 +287,23 @@ def train_one_epoch(
                 total = task_l
                 loss_dict = {"task": task_l.item(), "total": task_l.item()}
 
-        if scaler is not None:
-            scaler.scale(total).backward()
-            scaler.unscale_(optimizer)
-            nn.utils.clip_grad_norm_(model.parameters(), cfg.train.max_grad_norm)
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            total.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), cfg.train.max_grad_norm)
-            optimizer.step()
+        # Scale loss by accumulation steps for correct gradient magnitude
+        scaled_total = total / accum_steps
 
-        if scheduler is not None:
+        if scaler is not None:
+            scaler.scale(scaled_total).backward()
+            if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == len(loader):
+                scaler.unscale_(optimizer)
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.train.max_grad_norm)
+                scaler.step(optimizer)
+                scaler.update()
+        else:
+            scaled_total.backward()
+            if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == len(loader):
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.train.max_grad_norm)
+                optimizer.step()
+
+        if scheduler is not None and ((batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == len(loader)):
             scheduler.step()
 
         total_loss_accum += loss_dict["total"]

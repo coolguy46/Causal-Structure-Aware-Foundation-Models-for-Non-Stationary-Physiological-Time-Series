@@ -32,6 +32,7 @@ class CausalBiosignalModel(nn.Module):
         hop_length: int = 64,
         win_length: int = 256,
         bands: dict | None = None,
+        n_temporal_pools: int = 1,
         # Graph
         graph_n_layers: int = 2,
         graph_n_heads: int = 4,
@@ -54,6 +55,10 @@ class CausalBiosignalModel(nn.Module):
     ):
         super().__init__()
 
+        self.n_channels = n_channels
+        self.n_bands = len(bands) if bands else 5
+        self.n_temporal_pools = n_temporal_pools
+
         self.tokenizer = SpectralTokenizer(
             n_channels=n_channels,
             d_token=d_token,
@@ -62,6 +67,7 @@ class CausalBiosignalModel(nn.Module):
             win_length=win_length,
             sample_rate=sample_rate,
             bands=bands,
+            n_temporal_pools=n_temporal_pools,
         )
 
         self.decoder = TokenDecoder(
@@ -137,7 +143,16 @@ class CausalBiosignalModel(nn.Module):
         # 6. Reconstruction (from tokens, not embeddings)
         # Skip decoder during eval — saves iSTFT + linear per validation step
         if self.training:
-            recon = self.decoder(tokens)  # (B, C, T)
+            if self.n_temporal_pools > 1:
+                # Collapse temporal pools back for decoder: (B, C*bands*tp, d) -> (B, C*bands, d)
+                B_size = tokens.shape[0]
+                d = tokens.shape[-1]
+                tok_4d = tokens.reshape(B_size, self.n_channels, self.n_bands, self.n_temporal_pools, d)
+                tok_collapsed = tok_4d.mean(dim=3)  # average over temporal pools
+                tok_collapsed = tok_collapsed.reshape(B_size, self.n_channels * self.n_bands, d)
+                recon = self.decoder(tok_collapsed)
+            else:
+                recon = self.decoder(tokens)  # (B, C, T)
         else:
             recon = None
 

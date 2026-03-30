@@ -23,8 +23,8 @@
 #   10  Synthetic causal graph validation
 #   11  Run analysis notebook (all figures, tables, stats)
 #
-#  Estimated total GPU time: ~37 hrs on RTX 5090
-#  Estimated cost: ~$14 interruptible / ~$27 on-demand
+#  Estimated total GPU time: ~55 hrs on RTX 5090
+#  Estimated VRAM usage: ~20-24 GB peak (of 32 GB)
 # =============================================================================
 set -euo pipefail
 
@@ -40,10 +40,10 @@ SEEDS="42,123,7"
 DATASETS="sleep_edf,chbmit,ptbxl"
 
 # 5090 performance profile (override via environment variables if needed).
-MODEL_PRESET="${MODEL_PRESET:-large_5090}"
-NUM_WORKERS="${NUM_WORKERS:-16}"
+MODEL_PRESET="${MODEL_PRESET:-default}"
+NUM_WORKERS="${NUM_WORKERS:-24}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-128}"
-EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-128}"
+EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-256}"
 SMOKE_BATCH_SIZE="${SMOKE_BATCH_SIZE:-64}"
 
 # Ensure project modules are importable in mixed launch contexts.
