@@ -89,6 +89,10 @@ class SpectralTokenizer(nn.Module):
         # Reshape to (B*C, T) for batch STFT
         x_flat = x.reshape(B * C, T)
 
+        # torch.stft/complex kernels are not consistently supported for bf16
+        # under torch.compile+inductor. Keep spectral ops in fp32 for stability.
+        x_flat = x_flat.float()
+
         # STFT: output (B*C, n_freq, n_frames) complex
         spec = torch.stft(
             x_flat,
@@ -193,6 +197,9 @@ class TokenDecoder(nn.Module):
 
         # Reshape: (B*C, n_freq, n_frames)
         spec = spec_flat.reshape(B * self.n_channels, self.n_freq, self.n_frames)
+
+        # complex() does not accept bf16 tensors; cast to fp32 first.
+        spec = spec.float()
 
         # Convert magnitude to complex (zero phase for reconstruction)
         spec_complex = torch.complex(spec, torch.zeros_like(spec))
