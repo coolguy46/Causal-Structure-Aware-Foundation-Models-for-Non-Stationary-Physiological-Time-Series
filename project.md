@@ -33,6 +33,6 @@ Ablation shows the causal consistency loss alone accounts for most of the genera
 
 
 Why reviewers would accept this
-It hits every NeurIPS criterion simultaneously: a genuine theoretical contribution (the generalization bound), a methodological novelty (causally-constrained attention), a compelling application domain with reproducible benchmarks (SHHS, TUSZ, MIMIC-IV-ECG), and it speaks to multiple hot threads — foundation models, causal ML, and non-stationary learning — without being derivative of any single one.
+It hits every NeurIPS criterion simultaneously: a genuine theoretical contribution (the generalization bound), a methodological novelty (causally-constrained attention), a compelling application domain with reproducible benchmarks (Sleep-EDF, CHB-MIT, PTB-XL), and it speaks to multiple hot threads — foundation models, causal ML, and non-stationary learning — without being derivative of any single one.
 The one thing you'd need to be careful about: clearly differentiating from BrainOmni and the THD-BAR paper in your related work. The key differentiator is the causal graph as the mechanism of generalization, not as an auxiliary output. No existing paper makes that specific claim with a proof.
 Would you like help formalizing the theorem, designing the ablation study, or drafting the related work positioning?

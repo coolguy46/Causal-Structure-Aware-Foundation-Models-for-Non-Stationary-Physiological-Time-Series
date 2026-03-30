@@ -1,8 +1,8 @@
 name: shhs
 type: eeg
-path: ${paths.data_root}/shhs
+path: ${paths.data_root}/sleep_edf
 sample_rate: 125
-channels: 2  # C3-A2, C4-A1 for SHHS
+channels: 2  # Open-data replacement: Sleep-EDF channels
 window_sec: 4.0
 window_samples: 500  # 125 * 4
 stride_sec: 4.0
@@ -10,4 +10,4 @@ bandpass_low: 0.3
 bandpass_high: 35.0
 num_classes: 5  # W, N1, N2, N3, REM
 task: classification
-split_file: ${paths.data_root}/shhs/splits.json
+split_file: ${paths.data_root}/sleep_edf/splits.json

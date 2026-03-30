@@ -1,4 +1,4 @@
-"""ECG Dataset with lazy loading for MIMIC-IV-ECG."""
+"""ECG Dataset with lazy loading for open-access ECG benchmarks."""
 import json
 import logging
 from pathlib import Path
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ECGDataset(Dataset):
-    """Lazy-loading ECG dataset for MIMIC-IV-ECG.
+    """Lazy-loading ECG dataset for open-access ECG benchmarks.
 
     Expects preprocessed data stored as HDF5 with structure:
         /{record_id}/signals  -> (n_windows, n_leads, n_samples)

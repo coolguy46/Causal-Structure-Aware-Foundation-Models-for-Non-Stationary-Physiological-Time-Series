@@ -3,9 +3,9 @@ Foundation
 Weeks 1–2
 Experiments
 Dataset access
-SHHS, TUSZ, MIMIC-IV-ECG — request IRB exemptions and download scripts
+Sleep-EDF, CHB-MIT, PTB-XL — run open-access download scripts
 Baseline replication
-Replicate BrainOmni and THD-BAR results on SHHS as sanity check
+Replicate BrainOmni and THD-BAR results on Sleep-EDF as sanity check
 Preprocessing audit
 Verify channel alignment, sampling rates, artifact removal across all three corpora
 Procedure
@@ -20,13 +20,13 @@ Compute
 RTX 5090 32GB on Vast.ai (~$0.37/hr) — or A100 80GB if needed
 Required
 Storage
-~2TB fast NVMe for SHHS raw + preprocessed cache
+~250GB fast NVMe for open datasets raw + preprocessed cache
 Required
 Libraries
 mne, scipy, torch_geometric, hydra-core, wandb, pytest
 Required
 IRB
-Check if institutional IRB exemption needed for SHHS/MIMIC access
+No IRB exemption needed for open-access datasets
 Required
 Code outline
 src/
@@ -37,8 +37,8 @@ src/
     splits.py            # subject-stratified train/val/test splits
   config/
     base.yaml
-    dataset/shhs.yaml
-    dataset/tusz.yaml
+    dataset/sleep_edf.yaml
+    dataset/chbmit.yaml
 Deliverables
 All datasets downloaded and preprocessed
 Baseline numbers reproduced (within 1% of paper)
@@ -88,7 +88,7 @@ src/
     #   deproj: nn.Linear(d_token, stft_bins)
     #   istft: torchaudio.transforms.InverseSpectrogram
 Deliverables
-Spectral tokenizer trained, reconstruction loss < 0.05 on SHHS val
+Spectral tokenizer trained, reconstruction loss < 0.05 on Sleep-EDF val
 Band ablation table written up
 Token dim fixed for remainder of project
 
@@ -150,7 +150,7 @@ Ablate: graph-masked attention vs standard full attention — this is the key cl
 Adapter size sweep
 Vary adapter params ∈ {4k, 16k, 64k} — find minimum for good subject-level adaptation
 Cross-dataset transfer
-Train on SHHS, zero-shot eval on TUSZ and MIMIC-IV-ECG — primary generalization experiment
+Train on Sleep-EDF, zero-shot eval on CHB-MIT and PTB-XL — primary generalization experiment
 Procedure
 Mask injection
 Pass adjacency matrix as attention mask — zero-out attention logits where adj[i,j]=0
@@ -250,7 +250,7 @@ Paper
 Weeks 13–16
 Experiments
 Final benchmark run
-Full eval on SHHS sleep staging, TUSZ seizure detection, MIMIC-IV-ECG arrhythmia — 3 seeds each
+Full eval on Sleep-EDF sleep staging, CHB-MIT seizure detection, PTB-XL arrhythmia — 3 seeds each
 Graph interpretability
 Visualize inferred causal graphs for known pathologies — verify against clinical literature
 Scaling experiment
@@ -285,9 +285,9 @@ src/
     figure_2_graphs.ipynb
     figure_3_ablation.ipynb
 scripts/
-  download_shhs.sh
-  download_tusz.sh
-  download_mimic_ecg.sh
+  download_sleep_edf.sh
+  download_chbmit.sh
+  download_ptbxl.sh
 Deliverables
 All tables and figures finalized
 Code public on GitHub with tests passing

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class EEGDataset(Dataset):
-    """Lazy-loading EEG dataset for SHHS and TUSZ.
+    """Lazy-loading EEG dataset for open-access EEG benchmarks.
 
     Expects preprocessed data stored as HDF5 with structure:
         /{subject_id}/signals  -> (n_windows, n_channels, n_samples)

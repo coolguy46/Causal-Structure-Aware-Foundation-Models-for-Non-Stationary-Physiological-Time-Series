@@ -103,7 +103,7 @@ if [ "$START_STEP" -le 0 ]; then
 
     # System packages
     run_cmd apt-get update
-    run_cmd apt-get install -y git wget curl unzip htop tmux libhdf5-dev
+    run_cmd apt-get install -y git wget curl unzip htop tmux libhdf5-dev aria2 python3-pip
     rm -rf /var/lib/apt/lists/* 2>/dev/null || true
 
     # Directories
@@ -112,6 +112,7 @@ if [ "$START_STEP" -le 0 ]; then
 
     # Python packages
     run_cmd pip install --upgrade pip
+    run_cmd pip install --upgrade awscli
     run_cmd pip install torch>=2.7.0 torchaudio>=2.7.0 --index-url https://download.pytorch.org/whl/cu128
 
     # Verify GPU
