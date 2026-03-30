@@ -47,7 +47,14 @@ ABLATION_CONFIGS = {
 }
 
 
-def run_sweep(sweep_names: list[str], seeds: list[int] = [42, 123, 7]):
+def run_sweep(
+    sweep_names: list[str],
+    seeds: list[int] = [42, 123, 7],
+    model: str = "default",
+    train_batch_size: int = 128,
+    eval_batch_size: int = 128,
+    num_workers: int = 16,
+):
     """Run ablation sweep with multiple seeds."""
     for name in sweep_names:
         if name not in ABLATION_CONFIGS:
@@ -59,6 +66,10 @@ def run_sweep(sweep_names: list[str], seeds: list[int] = [42, 123, 7]):
             cmd = (
                 f"python -m src.train {overrides} "
                 f"seed={seed} "
+                f"model={model} "
+                f"train.batch_size={train_batch_size} "
+                f"eval.batch_size={eval_batch_size} "
+                f"num_workers={num_workers} "
                 f"wandb.project=causal-biosignal-ablation "
                 f"paths.output_dir=/workspace/outputs/{name}/seed_{seed}"
             )
@@ -83,6 +94,10 @@ if __name__ == "__main__":
         ],
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[42, 123, 7])
+    parser.add_argument("--model", default="default")
+    parser.add_argument("--train-batch-size", type=int, default=128)
+    parser.add_argument("--eval-batch-size", type=int, default=128)
+    parser.add_argument("--num-workers", type=int, default=16)
     args = parser.parse_args()
 
     # Expand sweep groups
@@ -106,4 +121,11 @@ if __name__ == "__main__":
         else:
             sweeps.append(s)
 
-    run_sweep(sweeps, args.seeds)
+    run_sweep(
+        sweeps,
+        args.seeds,
+        model=args.model,
+        train_batch_size=args.train_batch_size,
+        eval_batch_size=args.eval_batch_size,
+        num_workers=args.num_workers,
+    )

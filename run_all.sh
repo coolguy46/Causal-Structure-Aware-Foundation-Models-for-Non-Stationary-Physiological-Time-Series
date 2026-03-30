@@ -39,6 +39,13 @@ RESULTS_DIR="/workspace/results"
 SEEDS="42,123,7"
 DATASETS="sleep_edf,chbmit,ptbxl"
 
+# 5090 performance profile (override via environment variables if needed).
+MODEL_PRESET="${MODEL_PRESET:-large_5090}"
+NUM_WORKERS="${NUM_WORKERS:-16}"
+TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-128}"
+EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-128}"
+SMOKE_BATCH_SIZE="${SMOKE_BATCH_SIZE:-64}"
+
 # Ensure project modules are importable in mixed launch contexts.
 # Put repo and repo/src first to avoid external package shadowing.
 export PYTHONPATH="$REPO_DIR:$REPO_DIR/src:${PYTHONPATH:-}"
@@ -93,6 +100,10 @@ echo "  Causal Biosignal FM — Vast.ai Master Script"
 echo "  Starting from step $START_STEP"
 echo "  Synthetic data: $USE_SYNTHETIC"
 echo "  Dry run: $DRY_RUN"
+echo "  Model preset: $MODEL_PRESET"
+echo "  Train batch size: $TRAIN_BATCH_SIZE"
+echo "  Eval batch size: $EVAL_BATCH_SIZE"
+echo "  Num workers: $NUM_WORKERS"
 echo "  $(date)"
 echo "============================================================"
 
@@ -234,8 +245,11 @@ if [ "$START_STEP" -le 4 ]; then
 
     run_cmd python -m src.train \
         dataset=sleep_edf \
+        model=$MODEL_PRESET \
         train.epochs=3 \
-        train.batch_size=32 \
+        train.batch_size=$SMOKE_BATCH_SIZE \
+        eval.batch_size=$SMOKE_BATCH_SIZE \
+        num_workers=$NUM_WORKERS \
         wandb.mode=disabled \
         paths.data_root="$DATA_DIR" \
         paths.checkpoint_dir="$CKPT_DIR" \
@@ -278,7 +292,10 @@ if [ "$START_STEP" -le 6 ]; then
     run_cmd python -m src.train --multirun \
         seed=$SEEDS \
         dataset=$DATASETS \
-        model=default \
+        model=$MODEL_PRESET \
+        train.batch_size=$TRAIN_BATCH_SIZE \
+        eval.batch_size=$EVAL_BATCH_SIZE \
+        num_workers=$NUM_WORKERS \
         paths.data_root="$DATA_DIR" \
         paths.checkpoint_dir="$CKPT_DIR" \
         paths.output_dir="$OUTPUT_DIR"
@@ -307,6 +324,9 @@ if [ "$START_STEP" -le 7 ]; then
             seed=$SEEDS \
             dataset=$DATASETS \
             model=$BL \
+            train.batch_size=$TRAIN_BATCH_SIZE \
+            eval.batch_size=$EVAL_BATCH_SIZE \
+            num_workers=$NUM_WORKERS \
             paths.data_root="$DATA_DIR" \
             paths.checkpoint_dir="$CKPT_DIR" \
             paths.output_dir="$OUTPUT_DIR" \
