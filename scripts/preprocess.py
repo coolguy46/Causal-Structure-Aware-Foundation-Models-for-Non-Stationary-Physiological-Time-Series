@@ -340,6 +340,15 @@ def preprocess_sleep_edf(data_dir: str, output_dir: str):
         logger.error(f"No PSG EDF files found in {sc_dir}")
         return
 
+    hyp_files = sorted(sc_dir.glob("*Hypnogram.edf")) or sorted(sc_dir.glob("**/*Hypnogram.edf"))
+    hyp_by_prefix = {}
+    for hp in hyp_files:
+        # Sleep-EDF cassette naming pairs like:
+        #   SC4001E0-PSG.edf  <->  SC4001EC-Hypnogram.edf
+        # The stable key is the first 6 chars (e.g., SC4001).
+        key = hp.name[:6]
+        hyp_by_prefix.setdefault(key, []).append(hp)
+
     logger.info(f"Found {len(psg_files)} Sleep-EDF PSG files")
 
     target_sr = 100
@@ -383,10 +392,11 @@ def preprocess_sleep_edf(data_dir: str, output_dir: str):
                 raw.resample(target_sr)
                 data = raw.get_data()  # (2, T)
 
-                # Load hypnogram annotations
-                hyp_file = str(psg_file).replace("-PSG.edf", "-Hypnogram.edf")
-                hyp_path = Path(hyp_file)
-                if not hyp_path.exists():
+                # Load hypnogram annotations.
+                # Direct replacement is unreliable for Sleep-EDF (E0 vs EC suffix).
+                hyp_candidates = hyp_by_prefix.get(psg_file.name[:6], [])
+                hyp_path = hyp_candidates[0] if hyp_candidates else None
+                if hyp_path is None or not hyp_path.exists():
                     continue
 
                 annot = mne.read_annotations(str(hyp_path))
