@@ -372,10 +372,18 @@ def main(cfg: DictConfig):
         except Exception as e:
             logger.warning(f"Could not compute class weights: {e}")
 
+    # Per-dataset batch size overrides (for high-channel datasets like CHB-MIT)
+    train_bs = getattr(cfg.dataset, "train_batch_size", None) or cfg.train.batch_size
+    eval_bs = getattr(cfg.dataset, "eval_batch_size", None) or cfg.eval.batch_size
+    if hasattr(cfg.dataset, "accumulate_grad_batches"):
+        cfg.train.accumulate_grad_batches = cfg.dataset.accumulate_grad_batches
+    logger.info(f"Batch sizes: train={train_bs}, eval={eval_bs}, "
+                f"accum={cfg.train.accumulate_grad_batches}")
+
     nw = cfg.num_workers
     train_loader = DataLoader(
         train_ds,
-        batch_size=cfg.train.batch_size,
+        batch_size=train_bs,
         shuffle=True,
         num_workers=nw,
         pin_memory=True,
@@ -384,7 +392,7 @@ def main(cfg: DictConfig):
     )
     val_loader = DataLoader(
         val_ds,
-        batch_size=cfg.eval.batch_size,
+        batch_size=eval_bs,
         shuffle=False,
         num_workers=nw,
         pin_memory=True,

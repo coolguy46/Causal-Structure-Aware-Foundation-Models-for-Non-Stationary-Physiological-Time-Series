@@ -11,3 +11,8 @@ bandpass_high: 50.0
 num_classes: 2  # seizure / non-seizure
 task: classification
 split_file: ${paths.data_root}/chbmit/splits.json
+
+# 23ch × 5bands × 4temporal = 460 tokens → needs smaller batch to fit 32GB
+train_batch_size: 16
+eval_batch_size: 32
+accumulate_grad_batches: 8  # effective batch still 128

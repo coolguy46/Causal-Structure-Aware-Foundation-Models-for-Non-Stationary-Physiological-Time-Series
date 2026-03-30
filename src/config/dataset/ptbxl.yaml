@@ -11,3 +11,8 @@ bandpass_high: 40.0
 num_classes: 5  # NORM, MI, STTC, CD, HYP (superclasses)
 task: classification
 split_file: ${paths.data_root}/ptbxl/splits.json
+
+# 12ch × 5bands × 4temporal = 240 tokens → moderate, reduce batch slightly
+train_batch_size: 48
+eval_batch_size: 96
+accumulate_grad_batches: 4  # effective batch ~192
