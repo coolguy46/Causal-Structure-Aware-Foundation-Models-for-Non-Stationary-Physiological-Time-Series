@@ -6,6 +6,7 @@ Produces a single data.h5 per dataset with windowed, filtered signals.
 import argparse
 import json
 import logging
+import sys
 from pathlib import Path
 
 import h5py
@@ -13,6 +14,12 @@ import mne
 import numpy as np
 import wfdb
 from tqdm import tqdm
+
+# Allow running as: python scripts/preprocess.py ...
+# by adding the repository root to module search path.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from src.data.transforms import BandpassFilter, ArtifactRejection
 from src.data.splits import subject_stratified_split
