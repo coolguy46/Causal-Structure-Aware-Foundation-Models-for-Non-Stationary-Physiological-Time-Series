@@ -49,12 +49,23 @@ else
             "s3://physionet-open/chbmit/1.0.0/" \
             "$DATA_DIR/" \
             --exclude "index.html*" \
-            || true
+            || echo "aws s3 sync failed, will attempt HTTP fallback verification."
     fi
 
-    # Verify we downloaded some EDFs; otherwise fallback to recursive HTTP.
+    # Verify completeness; fallback to recursive HTTP when files are missing.
+    # RECORDS lists every EDF in the release and is the most reliable source.
+    if [ ! -f "$DATA_DIR/RECORDS" ]; then
+        wget -q -c "https://physionet.org/files/chbmit/1.0.0/RECORDS" -P "$DATA_DIR/" || true
+    fi
+
+    EXPECTED_EDF=664
+    if [ -f "$DATA_DIR/RECORDS" ]; then
+        EXPECTED_EDF=$(wc -l < "$DATA_DIR/RECORDS" | tr -d ' ')
+    fi
+
     EDF_COUNT=$(find "$DATA_DIR" -type f -name "*.edf" | wc -l || true)
-    if [ "${EDF_COUNT:-0}" -eq 0 ]; then
+    if [ "${EDF_COUNT:-0}" -lt "${EXPECTED_EDF:-664}" ]; then
+        echo "Found $EDF_COUNT/$EXPECTED_EDF EDF files after S3 sync; continuing with HTTP recursive download..."
         wget -r -N -c -np -nH --cut-dirs=3 \
             "https://physionet.org/files/chbmit/1.0.0/" \
             -P "$DATA_DIR/" \
@@ -67,6 +78,14 @@ import wfdb
 wfdb.dl_database('chbmit/1.0.0', '$DATA_DIR')
 "
         }
+
+        EDF_COUNT=$(find "$DATA_DIR" -type f -name "*.edf" | wc -l || true)
+    fi
+
+    if [ "${EDF_COUNT:-0}" -lt "${EXPECTED_EDF:-664}" ]; then
+        echo "ERROR: Incomplete CHB-MIT download: $EDF_COUNT/$EXPECTED_EDF EDF files present."
+        echo "Rerun this script to resume."
+        exit 1
     fi
 fi
 
