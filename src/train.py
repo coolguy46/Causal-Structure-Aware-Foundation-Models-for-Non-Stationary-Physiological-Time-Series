@@ -29,14 +29,12 @@ try:
 except ModuleNotFoundError as exc:
     if not exc.name or not exc.name.startswith("src"):
         raise
-    # Recover from path issues and from third-party `src` module shadowing.
     project_root = Path(__file__).resolve().parents[1]
     src_root = Path(__file__).resolve().parent
     for path in (str(project_root), str(src_root)):
         if path not in sys.path:
             sys.path.insert(0, path)
 
-    # If another package named `src` was imported first, retry with a clean slate.
     for mod_name in list(sys.modules):
         if mod_name == "src" or mod_name.startswith("src."):
             sys.modules.pop(mod_name, None)
@@ -50,7 +48,6 @@ except ModuleNotFoundError as exc:
         from src.loss.task_loss import classification_loss, joint_loss
         from src.eval.benchmark import evaluate_model
     except ModuleNotFoundError:
-        # Fallback for environments where only /path/to/repo/src is on sys.path.
         USE_LOCAL_IMPORTS = True
         from data.eeg_dataset import EEGDataset
         from data.ecg_dataset import ECGDataset
@@ -209,24 +206,21 @@ def train_one_epoch(
     total_loss_accum = 0.0
     n_batches = 0
 
-    gc.disable()  # prevent GC pauses during training
+    gc.disable()
 
     is_causal = getattr(cfg.model, "model_class", "causal") == "causal"
     accum_steps = getattr(cfg.train, "accumulate_grad_batches", 1)
 
-    # Causal loss is expensive (extra transformer passes). Compute every K steps
-    # to save ~60-80% wall time with negligible quality impact.
     causal_every = getattr(cfg.loss, "causal_every_n_steps", 4)
     global_step_offset = (epoch - 1) * len(loader)
 
     pbar = tqdm(loader, desc=f"Epoch {epoch}", leave=False, mininterval=2.0)
     batch_size_actual = 0
     for batch_idx, batch in enumerate(pbar):
-        signal = batch["signal"].to(device, non_blocking=True)  # (B, C, T)
-        label = batch["label"].to(device, non_blocking=True)    # (B,)
+        signal = batch["signal"].to(device, non_blocking=True)
+        label = batch["label"].to(device, non_blocking=True)
         batch_size_actual = signal.shape[0]
 
-        # Only zero grads at accumulation boundaries
         if batch_idx % accum_steps == 0:
             optimizer.zero_grad()
 
@@ -236,10 +230,10 @@ def train_one_epoch(
             dtype = torch.float16
         else:
             dtype = torch.float32
+
         with torch.autocast(device_type="cuda", dtype=dtype):
             output = model(signal)
 
-            # Task loss (always computed)
             task_l = classification_loss(
                 output["logits"], label,
                 label_smoothing=cfg.loss.task.label_smoothing,
@@ -247,14 +241,12 @@ def train_one_epoch(
             )
 
             if is_causal:
-                # Reconstruction loss
                 recon_loss = spectral_reconstruction_loss(
                     output["recon"], signal,
                     n_fft=cfg.model.tokenizer.stft_n_fft,
                     hop_length=cfg.model.tokenizer.stft_hop_length,
                 )
 
-                # Causal consistency loss — only every K steps
                 tokens = output["tokens"]
                 adj = output["adj"]
                 edge_probs = output["edge_probs"]
@@ -277,7 +269,6 @@ def train_one_epoch(
                 else:
                     causal_l = torch.tensor(0.0, device=device)
 
-                # Sparsity and DAG losses (cheap — always compute)
                 sparsity_l = model.graph_inferencer.sparsity_loss(edge_probs)
                 dag_l = model.graph_inferencer.dag_loss(edge_probs)
 
@@ -292,11 +283,9 @@ def train_one_epoch(
                     dag_loss=dag_l,
                 )
             else:
-                # Baselines: task loss only
                 total = task_l
                 loss_dict = {"task": task_l.item(), "total": task_l.item()}
 
-        # Scale loss by accumulation steps for correct gradient magnitude
         scaled_total = total / accum_steps
 
         if scaler is not None:
@@ -339,7 +328,6 @@ def train_one_epoch(
 def main(cfg: DictConfig):
     logger.info(f"Config:\n{OmegaConf.to_yaml(cfg)}")
 
-    # Seed — full reproducibility
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
@@ -352,7 +340,6 @@ def main(cfg: DictConfig):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
-    # W&B — reinit=True for Hydra multirun (separate run per job)
     if wandb.run is not None:
         wandb.finish()
     wandb.init(
@@ -367,10 +354,11 @@ def main(cfg: DictConfig):
     train_ds = build_dataset(cfg, "train")
     val_ds = build_dataset(cfg, "val")
 
-    # Compute inverse-frequency class weights for imbalanced datasets (e.g., CHB-MIT)
+    # Compute inverse-frequency class weights for imbalanced datasets (e.g., CHB-MIT).
+    # FIX: iterate over subjects (not index entries) to avoid reading each subject's
+    # labels array once per window — previously caused a freeze on CHB-MIT.
     class_weights = None
     if getattr(cfg.dataset, "num_classes", 0) == 2 and len(train_ds) > 0:
-        # Binary classification — likely imbalanced
         try:
             import h5py
             from collections import Counter
@@ -378,10 +366,11 @@ def main(cfg: DictConfig):
             h5_path = Path(train_ds.data_dir) / "data.h5"
             if h5_path.exists():
                 with h5py.File(h5_path, "r") as f:
-                    for subj_id, _ in train_ds.index:
-                        labels_arr = f[subj_id]["labels"][:]
-                        for lbl in labels_arr:
-                            label_counts[int(lbl)] += 1
+                    for subj_id in train_ds.subjects:  # iterate subjects, not index
+                        if subj_id in f:
+                            labels_arr = f[subj_id]["labels"][:]
+                            for lbl in labels_arr:
+                                label_counts[int(lbl)] += 1
             if label_counts:
                 n_classes = cfg.dataset.num_classes
                 total = sum(label_counts.values())
@@ -391,7 +380,7 @@ def main(cfg: DictConfig):
         except Exception as e:
             logger.warning(f"Could not compute class weights: {e}")
 
-    # Per-dataset batch size overrides (for high-channel datasets like CHB-MIT)
+    # Per-dataset batch size overrides
     train_bs = getattr(cfg.dataset, "train_batch_size", None) or cfg.train.batch_size
     eval_bs = getattr(cfg.dataset, "eval_batch_size", None) or cfg.eval.batch_size
     if hasattr(cfg.dataset, "accumulate_grad_batches"):
@@ -407,6 +396,7 @@ def main(cfg: DictConfig):
         num_workers=nw,
         pin_memory=True,
         drop_last=True,
+        # persistent_workers requires num_workers > 0
         persistent_workers=nw > 0,
     )
     val_loader = DataLoader(
@@ -421,7 +411,6 @@ def main(cfg: DictConfig):
     # Model
     model = build_model(cfg)
     model = model.to(device)
-    # torch.compile after .to(device) — avoids inductor issues with complex STFT kernels
     if cfg.hardware.compile:
         model = torch.compile(model, mode=cfg.hardware.compile_mode)
 
@@ -435,7 +424,7 @@ def main(cfg: DictConfig):
         weight_decay=cfg.train.weight_decay,
     )
 
-    # Scheduler: cosine with warmup
+    # Cosine scheduler with warmup
     total_steps = len(train_loader) * cfg.train.epochs
     warmup_steps = len(train_loader) * cfg.train.warmup_epochs
 
@@ -447,12 +436,11 @@ def main(cfg: DictConfig):
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
-    # GradScaler for mixed precision — only needed for fp16, not bf16
+    # GradScaler only needed for fp16, not bf16
     scaler = None
     if "fp16" in cfg.hardware.precision and device.type == "cuda":
         scaler = torch.amp.GradScaler("cuda")
 
-    # Paths — unique per dataset/seed/model to prevent overwrite in multirun
     model_class = getattr(cfg.model, "model_class", "causal")
     run_name = f"{model_class}_{cfg.dataset.name}_seed{cfg.seed}"
     ckpt_dir = Path(cfg.paths.checkpoint_dir) / run_name
@@ -470,14 +458,12 @@ def main(cfg: DictConfig):
         )
         logger.info(f"Train: {train_metrics}")
 
-        # Validation
         val_metrics = evaluate_model(model, val_loader, device, cfg)
         logger.info(f"Val: {val_metrics}")
 
         if wandb.run:
             wandb.log({**{"val/" + k: v for k, v in val_metrics.items()}, "epoch": epoch})
 
-        # Checkpointing
         val_f1 = val_metrics.get("f1_macro", 0.0)
         if val_f1 > best_val_f1:
             best_val_f1 = val_f1
@@ -501,7 +487,6 @@ def main(cfg: DictConfig):
     wandb.finish()
     logger.info(f"Training complete. Best val F1: {best_val_f1:.4f}")
 
-    # Explicit cleanup to free RAM between Hydra multirun jobs
     del train_loader, val_loader, train_ds, val_ds, model, optimizer, scheduler
     gc.collect()
     torch.cuda.empty_cache()
