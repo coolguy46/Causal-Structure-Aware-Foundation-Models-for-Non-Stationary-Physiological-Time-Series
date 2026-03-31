@@ -124,9 +124,11 @@ class EEGDataset(Dataset):
             label = self.labels[idx]
         else:
             subj, win_idx = self.index[idx]
-            with h5py.File(self._h5_path, "r", swmr=True) as f:
-                signal = f[subj]["signals"][win_idx].astype(np.float32)
-                label = int(f[subj]["labels"][win_idx])
+            # Lazy-open persistent handle per worker (avoids open/close per sample)
+            if not hasattr(self, "_h5_handle") or self._h5_handle is None:
+                self._h5_handle = h5py.File(self._h5_path, "r")
+            signal = self._h5_handle[subj]["signals"][win_idx].astype(np.float32)
+            label = int(self._h5_handle[subj]["labels"][win_idx])
 
         # Per-channel z-score (bandpass already applied during preprocessing)
         signal = self.normalize(signal)
