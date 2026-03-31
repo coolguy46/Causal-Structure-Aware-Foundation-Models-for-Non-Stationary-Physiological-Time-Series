@@ -16,4 +16,4 @@ split_file: ${paths.data_root}/chbmit/splits.json
 train_batch_size: 64
 eval_batch_size: 128
 accumulate_grad_batches: 2  # effective batch still 128
-preload: true  # ~68GB for full preload, too large for 64GB RAM
+preload: true  # ~31GB in float16, fits 64GB RAM

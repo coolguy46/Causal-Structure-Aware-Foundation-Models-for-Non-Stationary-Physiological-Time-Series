@@ -74,6 +74,7 @@ class CausalGraphInferencer(nn.Module):
             nn.Linear(d_model // 2, 1),
         )
 
+    @torch.compiler.disable
     def forward(
         self, tokens: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:

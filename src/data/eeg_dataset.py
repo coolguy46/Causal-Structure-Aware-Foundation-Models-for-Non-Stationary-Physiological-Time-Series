@@ -119,7 +119,12 @@ class EEGDataset(Dataset):
         return index
 
     def _preload(self):
-        """Load all signals and labels into RAM (entire subjects at once)."""
+        """Load all signals and labels into RAM (entire subjects at once).
+
+        Stores signals as float16 to halve memory (~31 GB vs ~63 GB for
+        CHB-MIT).  The tensor is cast to float32 in __getitem__ before
+        normalisation and downstream ops.
+        """
         h5_path = self.data_dir / "data.h5"
         if not h5_path.exists() or len(self.index) == 0:
             return [], []
@@ -136,7 +141,7 @@ class EEGDataset(Dataset):
                 sigs = f[subj]["signals"][:]  # read entire subject at once
                 labs = f[subj]["labels"][:]
                 for i, win_idx in entries:
-                    all_signals[i] = sigs[win_idx].astype(np.float32)
+                    all_signals[i] = sigs[win_idx].astype(np.float16)
                     all_labels[i] = int(labs[win_idx])
         logger.info(f"Preloaded {len(all_signals)} windows into RAM")
         return all_signals, all_labels
@@ -146,7 +151,7 @@ class EEGDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         if self.preload:
-            signal = self.signals[idx]  # (C, T) already float32
+            signal = self.signals[idx].astype(np.float32)  # fp16 -> fp32
             label = self.labels[idx]
         else:
             subj, win_idx = self.index[idx]
