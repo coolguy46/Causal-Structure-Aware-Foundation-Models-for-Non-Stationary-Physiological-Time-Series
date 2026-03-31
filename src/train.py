@@ -74,6 +74,7 @@ def build_dataset(cfg: DictConfig, split: str):
             channels=cfg.dataset.channels,
             bandpass_low=cfg.dataset.bandpass_low,
             bandpass_high=cfg.dataset.bandpass_high,
+            preload=getattr(cfg.dataset, "preload", True),
         )
     elif cfg.dataset.type == "ecg":
         return ECGDataset(
@@ -499,6 +500,11 @@ def main(cfg: DictConfig):
 
     wandb.finish()
     logger.info(f"Training complete. Best val F1: {best_val_f1:.4f}")
+
+    # Explicit cleanup to free RAM between Hydra multirun jobs
+    del train_loader, val_loader, train_ds, val_ds, model, optimizer, scheduler
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

@@ -33,6 +33,7 @@ class EEGDataset(Dataset):
         bandpass_low: float = 0.3,
         bandpass_high: float = 35.0,
         transform: Optional[object] = None,
+        preload: bool = True,
     ):
         self.data_dir = Path(data_dir)
         self.split = split
@@ -40,6 +41,7 @@ class EEGDataset(Dataset):
         self.window_samples = window_samples
         self.channels = channels
         self.transform = transform
+        self.preload = preload
 
         self.bandpass = BandpassFilter(
             low=bandpass_low, high=bandpass_high, fs=sample_rate
@@ -53,11 +55,16 @@ class EEGDataset(Dataset):
         self.index = self._build_index()
 
         # Preload all data into RAM to eliminate HDF5 I/O during training
-        self.signals, self.labels = self._preload()
+        if self.preload:
+            self.signals, self.labels = self._preload()
+        else:
+            self.signals, self.labels = None, None
+            self._h5_path = self.data_dir / "data.h5"
 
+        mode = "preloaded to RAM" if self.preload else "lazy HDF5"
         logger.info(
             f"EEGDataset [{split}]: {len(self.subjects)} subjects, "
-            f"{len(self.index)} windows (preloaded to RAM)"
+            f"{len(self.index)} windows ({mode})"
         )
 
     def _load_split(self, split_file: Optional[str], split: str) -> list[str]:
@@ -112,8 +119,14 @@ class EEGDataset(Dataset):
         return len(self.index)
 
     def __getitem__(self, idx: int) -> dict:
-        signal = self.signals[idx]  # (C, T) already float32
-        label = self.labels[idx]
+        if self.preload:
+            signal = self.signals[idx]  # (C, T) already float32
+            label = self.labels[idx]
+        else:
+            subj, win_idx = self.index[idx]
+            with h5py.File(self._h5_path, "r", swmr=True) as f:
+                signal = f[subj]["signals"][win_idx].astype(np.float32)
+                label = int(f[subj]["labels"][win_idx])
 
         # Per-channel z-score (bandpass already applied during preprocessing)
         signal = self.normalize(signal)
