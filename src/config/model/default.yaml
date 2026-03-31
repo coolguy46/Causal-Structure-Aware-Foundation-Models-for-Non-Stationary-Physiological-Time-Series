@@ -1,12 +1,12 @@
 model_class: causal  # causal | patchtst | vanilla_tf | static_gnn | corr_graph | raw_waveform
-d_token: 512
+d_token: 256
 n_bands: 5  # delta, theta, alpha, beta, gamma
 
 tokenizer:
-  stft_n_fft: 512
+  stft_n_fft: 256
   stft_hop_length: 64
-  stft_win_length: 512
-  n_temporal_pools: 4  # 4 temporal buckets → 4x tokens → heavy attention
+  stft_win_length: 256
+  n_temporal_pools: 2  # 2 temporal buckets — balances resolution vs speed
   bands:
     delta: [0.5, 4.0]
     theta: [4.0, 8.0]
@@ -15,8 +15,8 @@ tokenizer:
     gamma: [30.0, 50.0]
 
 graph:
-  n_layers: 6
-  n_heads: 16
+  n_layers: 2
+  n_heads: 8
   d_model: ${..d_token}
   dropout: 0.1
   sparsity_threshold: 0.5
@@ -24,19 +24,19 @@ graph:
   dag_constraint: true
 
 transformer:
-  n_layers: 20
-  n_heads: 16
+  n_layers: 10
+  n_heads: 8
   d_model: ${..d_token}
-  d_ff: 2048
+  d_ff: 1024
   dropout: 0.1
   max_seq_len: 2048
-  gradient_checkpointing: false  # not needed — per-dataset batch sizes keep VRAM in budget
+  gradient_checkpointing: false
 
 adapter:
-  hidden_dim: 512
-  n_layers: 4
+  hidden_dim: 256
+  n_layers: 2
   residual: true
 
 classifier:
-  hidden_dim: 1536
+  hidden_dim: 512
   dropout: 0.3

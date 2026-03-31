@@ -1,13 +1,13 @@
 lambda_recon: 1.0
 lambda_causal: 0.2
 lambda_task: 1.0
-causal_every_n_steps: 4  # compute expensive causal loss every N steps (saves ~30% wall time)
+causal_every_n_steps: 8  # compute expensive causal loss every N steps (saves ~60% wall time)
 
 reconstruction:
   type: mse_spectral  # MSE in STFT domain
 
 causal_consistency:
-  n_interventions: 3  # reduced from 5 — still effective when batched
+  n_interventions: 2  # reduced for speed — still effective when batched
   intervention_type: zero  # zero-out node embedding
   use_edge_loss: true  # counterfactual edge necessity
   edge_loss_weight: 0.5

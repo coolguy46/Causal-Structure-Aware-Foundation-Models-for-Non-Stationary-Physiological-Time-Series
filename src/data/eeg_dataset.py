@@ -1,4 +1,4 @@
-"""EEG Dataset with lazy loading and bandpass filtering."""
+"""EEG Dataset with lazy loading."""
 import json
 import logging
 from pathlib import Path
@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .transforms import BandpassFilter, ZScoreNormalize, ArtifactRejection
+from .transforms import ZScoreNormalize
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,6 @@ class EEGDataset(Dataset):
         self.channels = channels
         self.transform = transform
 
-        self.bandpass = BandpassFilter(
-            low=bandpass_low, high=bandpass_high, fs=sample_rate
-        )
         self.normalize = ZScoreNormalize()
 
         # Load split information
@@ -55,6 +52,9 @@ class EEGDataset(Dataset):
             f"EEGDataset [{split}]: {len(self.subjects)} subjects, "
             f"{len(self.index)} windows"
         )
+
+        # Persistent HDF5 handle — opened lazily per worker process
+        self._h5_file = None
 
     def _load_split(self, split_file: Optional[str], split: str) -> list[str]:
         if split_file and Path(split_file).exists():
@@ -84,18 +84,21 @@ class EEGDataset(Dataset):
     def __len__(self) -> int:
         return len(self.index)
 
+    def _get_h5(self):
+        """Return a persistent HDF5 handle (one per worker process)."""
+        if self._h5_file is None:
+            h5_path = self.data_dir / "data.h5"
+            self._h5_file = h5py.File(h5_path, "r")
+        return self._h5_file
+
     def __getitem__(self, idx: int) -> dict:
         subj_id, win_idx = self.index[idx]
-        h5_path = self.data_dir / "data.h5"
 
-        with h5py.File(h5_path, "r") as f:
-            signal = f[subj_id]["signals"][win_idx]  # (C, T)
-            label = int(f[subj_id]["labels"][win_idx])
+        f = self._get_h5()
+        signal = f[subj_id]["signals"][win_idx]  # (C, T)
+        label = int(f[subj_id]["labels"][win_idx])
 
         signal = signal.astype(np.float32)
-
-        # Apply bandpass filter
-        signal = self.bandpass(signal)
 
         # Per-channel z-score
         signal = self.normalize(signal)

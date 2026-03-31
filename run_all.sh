@@ -41,7 +41,7 @@ DATASETS="sleep_edf,chbmit,ptbxl"
 
 # 5090 performance profile (override via environment variables if needed).
 MODEL_PRESET="${MODEL_PRESET:-default}"
-NUM_WORKERS="${NUM_WORKERS:-24}"
+NUM_WORKERS="${NUM_WORKERS:-2}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-128}"
 EVAL_BATCH_SIZE="${EVAL_BATCH_SIZE:-256}"
 SMOKE_BATCH_SIZE="${SMOKE_BATCH_SIZE:-64}"
