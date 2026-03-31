@@ -4,7 +4,7 @@ n_bands: 5  # delta, theta, alpha, beta, gamma
 
 tokenizer:
   stft_n_fft: 512
-  stft_hop_length: 32
+  stft_hop_length: 64
   stft_win_length: 512
   n_temporal_pools: 4  # 4 temporal buckets → 4x tokens → heavy attention
   bands:
