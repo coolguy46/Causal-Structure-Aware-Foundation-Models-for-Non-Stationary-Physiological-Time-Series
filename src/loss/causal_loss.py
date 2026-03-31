@@ -156,7 +156,7 @@ def distributional_invariance_loss(
     emb_flat = transformer_fn(tokens_flat, adj_flat)
     emb_do = emb_flat.reshape(n_interventions, B, N, d)
 
-    variance = emb_do.var(dim=0).sum(dim=-1)  # (B, N)
+    variance = emb_do.var(dim=0, correction=0).sum(dim=-1)  # (B, N)
     loss = (variance * mask).sum(dim=-1) / (mask.sum(dim=-1) + 1e-8)
     return loss.mean()
 

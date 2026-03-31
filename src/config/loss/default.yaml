@@ -14,7 +14,7 @@ causal_consistency:
   n_edges: 1  # number of edges to ablate per step
   use_invariance_loss: true  # distributional invariance (IRM-inspired)
   invariance_loss_weight: 0.3
-  n_invariance_values: 1  # number of intervention values for invariance check
+  n_invariance_values: 2  # minimum 2 for variance computation
 
 task:
   type: cross_entropy
