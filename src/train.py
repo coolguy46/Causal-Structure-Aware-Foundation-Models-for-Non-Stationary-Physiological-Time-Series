@@ -1,4 +1,5 @@
 """Main training entry point with Hydra config."""
+import gc
 import logging
 import os
 import random
@@ -207,6 +208,8 @@ def train_one_epoch(
     total_loss_accum = 0.0
     n_batches = 0
 
+    gc.disable()  # prevent GC pauses during training
+
     is_causal = getattr(cfg.model, "model_class", "causal") == "causal"
     accum_steps = getattr(cfg.train, "accumulate_grad_batches", 1)
 
@@ -215,7 +218,7 @@ def train_one_epoch(
     causal_every = getattr(cfg.loss, "causal_every_n_steps", 4)
     global_step_offset = (epoch - 1) * len(loader)
 
-    pbar = tqdm(loader, desc=f"Epoch {epoch}", leave=False)
+    pbar = tqdm(loader, desc=f"Epoch {epoch}", leave=False, mininterval=2.0)
     batch_size_actual = 0
     for batch_idx, batch in enumerate(pbar):
         signal = batch["signal"].to(device, non_blocking=True)  # (B, C, T)
@@ -325,6 +328,8 @@ def train_one_epoch(
         if wandb.run and batch_idx % 100 == 0:
             wandb.log({"train/" + k: v for k, v in loss_dict.items()})
 
+    gc.enable()
+    gc.collect()
     return {"avg_loss": total_loss_accum / max(n_batches, 1)}
 
 

@@ -51,9 +51,13 @@ class EEGDataset(Dataset):
 
         # Build index: list of (subject_id, window_idx)
         self.index = self._build_index()
+
+        # Preload all data into RAM to eliminate HDF5 I/O during training
+        self.signals, self.labels = self._preload()
+
         logger.info(
             f"EEGDataset [{split}]: {len(self.subjects)} subjects, "
-            f"{len(self.index)} windows"
+            f"{len(self.index)} windows (preloaded to RAM)"
         )
 
     def _load_split(self, split_file: Optional[str], split: str) -> list[str]:
@@ -81,27 +85,26 @@ class EEGDataset(Dataset):
                     index.extend([(subj, i) for i in range(n_windows)])
         return index
 
+    def _preload(self):
+        """Load all signals and labels into RAM."""
+        h5_path = self.data_dir / "data.h5"
+        if not h5_path.exists() or len(self.index) == 0:
+            return [], []
+        signals = []
+        labels = []
+        with h5py.File(h5_path, "r") as f:
+            for subj, win_idx in self.index:
+                signals.append(f[subj]["signals"][win_idx].astype(np.float32))
+                labels.append(int(f[subj]["labels"][win_idx]))
+        logger.info(f"Preloaded {len(signals)} windows into RAM")
+        return signals, labels
+
     def __len__(self) -> int:
         return len(self.index)
 
-    def _get_h5(self):
-        """Return a persistent HDF5 file handle (one per worker)."""
-        if not hasattr(self, "_h5_handle") or self._h5_handle is None:
-            self._h5_handle = h5py.File(self.data_dir / "data.h5", "r")
-        return self._h5_handle
-
-    def __del__(self):
-        if getattr(self, "_h5_handle", None) is not None:
-            self._h5_handle.close()
-
     def __getitem__(self, idx: int) -> dict:
-        subj_id, win_idx = self.index[idx]
-
-        f = self._get_h5()
-        signal = f[subj_id]["signals"][win_idx]  # (C, T)
-        label = int(f[subj_id]["labels"][win_idx])
-
-        signal = signal.astype(np.float32)
+        signal = self.signals[idx]  # (C, T) already float32
+        label = self.labels[idx]
 
         # Per-channel z-score (bandpass already applied during preprocessing)
         signal = self.normalize(signal)
@@ -112,7 +115,7 @@ class EEGDataset(Dataset):
         sample = {
             "signal": signal,       # (C, T)
             "label": label,         # scalar
-            "subject_id": subj_id,
+            "subject_id": self.index[idx][0],
         }
 
         if self.transform:
