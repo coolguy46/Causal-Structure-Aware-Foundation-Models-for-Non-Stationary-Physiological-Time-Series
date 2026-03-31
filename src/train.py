@@ -260,7 +260,8 @@ def train_one_epoch(
                 embeddings = output["embeddings"]
 
                 step = global_step_offset + batch_idx
-                if step % causal_every == 0:
+                warmup_done = epoch > cfg.train.warmup_epochs
+                if warmup_done and step % causal_every == 0:
                     causal_l = causal_consistency_loss(
                         adj=adj,
                         edge_probs=edge_probs,

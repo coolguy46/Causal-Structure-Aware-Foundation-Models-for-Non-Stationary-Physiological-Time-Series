@@ -1,7 +1,7 @@
 lambda_recon: 1.0
-lambda_causal: 0.1
+lambda_causal: 0.05
 lambda_task: 1.0
-causal_every_n_steps: 200  # compute expensive causal loss every N steps
+causal_every_n_steps: 50  # compute expensive causal loss every N steps
 
 reconstruction:
   type: mse_spectral  # MSE in STFT domain
