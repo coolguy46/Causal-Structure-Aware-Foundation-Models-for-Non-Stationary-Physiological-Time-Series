@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .transforms import ZScoreNormalize
+from .transforms import BandpassFilter, ZScoreNormalize
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,9 @@ class ECGDataset(Dataset):
         self.channels = channels
         self.transform = transform
 
+        self.bandpass = BandpassFilter(
+            low=bandpass_low, high=bandpass_high, fs=sample_rate
+        )
         self.normalize = ZScoreNormalize()
 
         self.subjects = self._load_split(split_file, split)
@@ -49,9 +52,6 @@ class ECGDataset(Dataset):
             f"ECGDataset [{split}]: {len(self.subjects)} records, "
             f"{len(self.index)} windows"
         )
-
-        # Persistent HDF5 handle — opened lazily per worker process
-        self._h5_file = None
 
     def _load_split(self, split_file: Optional[str], split: str) -> list[str]:
         if split_file and Path(split_file).exists():
@@ -80,21 +80,16 @@ class ECGDataset(Dataset):
     def __len__(self) -> int:
         return len(self.index)
 
-    def _get_h5(self):
-        """Return a persistent HDF5 handle (one per worker process)."""
-        if self._h5_file is None:
-            h5_path = self.data_dir / "data.h5"
-            self._h5_file = h5py.File(h5_path, "r")
-        return self._h5_file
-
     def __getitem__(self, idx: int) -> dict:
         rec_id, win_idx = self.index[idx]
+        h5_path = self.data_dir / "data.h5"
 
-        f = self._get_h5()
-        signal = f[rec_id]["signals"][win_idx]  # (C, T)
-        label = int(f[rec_id]["labels"][win_idx])
+        with h5py.File(h5_path, "r") as f:
+            signal = f[rec_id]["signals"][win_idx]  # (C, T)
+            label = int(f[rec_id]["labels"][win_idx])
 
         signal = signal.astype(np.float32)
+        signal = self.bandpass(signal)
         signal = self.normalize(signal)
 
         signal = torch.from_numpy(signal)

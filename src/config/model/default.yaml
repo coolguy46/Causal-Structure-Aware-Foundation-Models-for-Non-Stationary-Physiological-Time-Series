@@ -6,7 +6,7 @@ tokenizer:
   stft_n_fft: 256
   stft_hop_length: 64
   stft_win_length: 256
-  n_temporal_pools: 2  # 2 temporal buckets — balances resolution vs speed
+  n_temporal_pools: 1
   bands:
     delta: [0.5, 4.0]
     theta: [4.0, 8.0]
@@ -24,16 +24,16 @@ graph:
   dag_constraint: true
 
 transformer:
-  n_layers: 10
+  n_layers: 8
   n_heads: 8
   d_model: ${..d_token}
   d_ff: 1024
   dropout: 0.1
-  max_seq_len: 2048
-  gradient_checkpointing: false
+  max_seq_len: 1024
+  gradient_checkpointing: true
 
 adapter:
-  hidden_dim: 256
+  hidden_dim: 128
   n_layers: 2
   residual: true
 

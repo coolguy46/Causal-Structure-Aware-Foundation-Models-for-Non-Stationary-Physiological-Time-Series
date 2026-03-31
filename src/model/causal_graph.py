@@ -121,8 +121,8 @@ class CausalGraphInferencer(nn.Module):
         A_sq = edge_probs * edge_probs
         eye = torch.eye(N, device=edge_probs.device).unsqueeze(0)
         A_sq = A_sq * (1.0 - eye)
-        # Capped power series: O(K * N^2 * B) with K=6 instead of K=N
-        K = min(N, 6)
+        # Capped power series: O(K * N^2 * B) with K=10 instead of K=N
+        K = min(N, 10)
         M = torch.eye(N, device=edge_probs.device).unsqueeze(0).expand_as(A_sq)
         A_power = torch.eye(N, device=edge_probs.device).unsqueeze(0).expand_as(A_sq)
         for k in range(1, K + 1):

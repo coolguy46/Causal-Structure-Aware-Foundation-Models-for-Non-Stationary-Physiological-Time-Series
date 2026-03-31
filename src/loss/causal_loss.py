@@ -179,12 +179,12 @@ def causal_consistency_loss(
 
     if use_edge_loss:
         loss = loss + 0.5 * counterfactual_edge_loss(
-            adj, edge_probs, embeddings, transformer_fn, tokens, n_edges=2
+            adj, edge_probs, embeddings, transformer_fn, tokens, n_edges=3
         )
 
     if use_invariance_loss:
         loss = loss + 0.3 * distributional_invariance_loss(
-            adj, embeddings, transformer_fn, tokens, n_interventions=2
+            adj, embeddings, transformer_fn, tokens, n_interventions=3
         )
 
     return loss

@@ -5,21 +5,21 @@ defaults:
   - _self_
 
 seed: 42
-num_workers: 2
+num_workers: 4
 
 train:
-  epochs: 80
-  batch_size: 128
-  lr: 2e-4
-  weight_decay: 1e-4
-  warmup_epochs: 5
+  epochs: 60
+  batch_size: 256
+  lr: 3e-4
+  weight_decay: 1e-5
+  warmup_epochs: 3
   max_grad_norm: 1.0
-  accumulate_grad_batches: 2  # effective batch 256
-  early_stopping_patience: 12
+  accumulate_grad_batches: 1
+  early_stopping_patience: 10
   scheduler: cosine
 
 eval:
-  batch_size: 256
+  batch_size: 512
   metrics: [f1_macro, auroc, ece]
 
 wandb:
@@ -35,5 +35,5 @@ paths:
 hardware:
   gpus: 1
   precision: bf16-mixed  # bf16 native on 5090/A100, faster than fp16
-  compile: false  # disable torch.compile — inductor has issues with complex STFT ops
+  compile: true  # torch.compile
   compile_mode: reduce-overhead
