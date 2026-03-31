@@ -258,12 +258,22 @@ def train_one_epoch(
 
                 step = global_step_offset + batch_idx
                 if step % causal_every == 0:
+                    # Subsample to cap causal loss cost at fixed batch size
+                    causal_max_b = 64
+                    if adj.shape[0] > causal_max_b:
+                        idx_c = torch.randperm(adj.shape[0], device=device)[:causal_max_b]
+                        c_adj = adj[idx_c]
+                        c_ep = edge_probs[idx_c]
+                        c_emb = embeddings[idx_c]
+                        c_tok = tokens[idx_c]
+                    else:
+                        c_adj, c_ep, c_emb, c_tok = adj, edge_probs, embeddings, tokens
                     causal_l = causal_consistency_loss(
-                        adj=adj,
-                        edge_probs=edge_probs,
-                        embeddings=embeddings,
+                        adj=c_adj,
+                        edge_probs=c_ep,
+                        embeddings=c_emb,
                         transformer_fn=model.transformer,
-                        tokens=tokens,
+                        tokens=c_tok,
                         n_interventions=cfg.loss.causal_consistency.n_interventions,
                         intervention_type=cfg.loss.causal_consistency.intervention_type,
                         n_edges=getattr(cfg.loss.causal_consistency, 'n_edges', 1),
