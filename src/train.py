@@ -216,9 +216,11 @@ def train_one_epoch(
     global_step_offset = (epoch - 1) * len(loader)
 
     pbar = tqdm(loader, desc=f"Epoch {epoch}", leave=False)
+    batch_size_actual = 0
     for batch_idx, batch in enumerate(pbar):
         signal = batch["signal"].to(device, non_blocking=True)  # (B, C, T)
         label = batch["label"].to(device, non_blocking=True)    # (B,)
+        batch_size_actual = signal.shape[0]
 
         # Only zero grads at accumulation boundaries
         if batch_idx % accum_steps == 0:
@@ -311,9 +313,12 @@ def train_one_epoch(
         total_loss_accum += loss_dict["total"]
         n_batches += 1
 
+        its = pbar.format_dict.get("rate", 0) or 0
+        sps = its * batch_size_actual
         pbar.set_postfix({
             "loss": f"{loss_dict['total']:.4f}",
             "task": f"{loss_dict['task']:.4f}",
+            "samp/s": f"{sps:.0f}",
         })
 
         if wandb.run:
