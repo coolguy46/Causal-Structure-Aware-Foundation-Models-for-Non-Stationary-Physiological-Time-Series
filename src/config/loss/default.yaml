@@ -12,7 +12,7 @@ causal_consistency:
   use_edge_loss: true  # counterfactual edge necessity
   edge_loss_weight: 0.5
   n_edges: 1  # number of edges to ablate per step
-  use_invariance_loss: true  # distributional invariance (IRM-inspired)
+  use_invariance_loss: false  # disabled: needs many samples & causes batch size mismatch with torch.compile
   invariance_loss_weight: 0.3
   n_invariance_values: 2  # minimum 2 for variance computation
 
