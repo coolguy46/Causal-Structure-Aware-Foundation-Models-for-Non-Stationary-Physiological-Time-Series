@@ -80,13 +80,22 @@ class ECGDataset(Dataset):
     def __len__(self) -> int:
         return len(self.index)
 
+    def _get_h5(self):
+        """Return a persistent HDF5 file handle (one per worker)."""
+        if not hasattr(self, "_h5_handle") or self._h5_handle is None:
+            self._h5_handle = h5py.File(self.data_dir / "data.h5", "r")
+        return self._h5_handle
+
+    def __del__(self):
+        if getattr(self, "_h5_handle", None) is not None:
+            self._h5_handle.close()
+
     def __getitem__(self, idx: int) -> dict:
         rec_id, win_idx = self.index[idx]
-        h5_path = self.data_dir / "data.h5"
 
-        with h5py.File(h5_path, "r") as f:
-            signal = f[rec_id]["signals"][win_idx]  # (C, T)
-            label = int(f[rec_id]["labels"][win_idx])
+        f = self._get_h5()
+        signal = f[rec_id]["signals"][win_idx]  # (C, T)
+        label = int(f[rec_id]["labels"][win_idx])
 
         signal = signal.astype(np.float32)
         signal = self.bandpass(signal)
