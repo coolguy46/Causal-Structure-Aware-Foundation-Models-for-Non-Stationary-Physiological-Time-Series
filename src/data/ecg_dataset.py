@@ -82,18 +82,27 @@ class ECGDataset(Dataset):
         return index
 
     def _preload(self):
-        """Load all signals and labels into RAM."""
+        """Load all signals and labels into RAM (entire records at once)."""
         h5_path = self.data_dir / "data.h5"
         if not h5_path.exists() or len(self.index) == 0:
             return [], []
-        signals = []
-        labels = []
+        all_signals = [None] * len(self.index)
+        all_labels = [None] * len(self.index)
+        # Group indices by record for bulk reads
+        rec_ranges = {}
+        for i, (rec, win_idx) in enumerate(self.index):
+            if rec not in rec_ranges:
+                rec_ranges[rec] = []
+            rec_ranges[rec].append((i, win_idx))
         with h5py.File(h5_path, "r") as f:
-            for rec, win_idx in self.index:
-                signals.append(f[rec]["signals"][win_idx].astype(np.float32))
-                labels.append(int(f[rec]["labels"][win_idx]))
-        logger.info(f"Preloaded {len(signals)} windows into RAM")
-        return signals, labels
+            for rec, entries in rec_ranges.items():
+                sigs = f[rec]["signals"][:]  # read entire record at once
+                labs = f[rec]["labels"][:]
+                for i, win_idx in entries:
+                    all_signals[i] = sigs[win_idx].astype(np.float32)
+                    all_labels[i] = int(labs[win_idx])
+        logger.info(f"Preloaded {len(all_signals)} windows into RAM")
+        return all_signals, all_labels
 
     def __len__(self) -> int:
         return len(self.index)

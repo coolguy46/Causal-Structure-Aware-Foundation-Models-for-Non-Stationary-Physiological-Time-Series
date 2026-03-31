@@ -86,18 +86,27 @@ class EEGDataset(Dataset):
         return index
 
     def _preload(self):
-        """Load all signals and labels into RAM."""
+        """Load all signals and labels into RAM (entire subjects at once)."""
         h5_path = self.data_dir / "data.h5"
         if not h5_path.exists() or len(self.index) == 0:
             return [], []
-        signals = []
-        labels = []
+        all_signals = [None] * len(self.index)
+        all_labels = [None] * len(self.index)
+        # Group indices by subject for bulk reads
+        subj_ranges = {}
+        for i, (subj, win_idx) in enumerate(self.index):
+            if subj not in subj_ranges:
+                subj_ranges[subj] = []
+            subj_ranges[subj].append((i, win_idx))
         with h5py.File(h5_path, "r") as f:
-            for subj, win_idx in self.index:
-                signals.append(f[subj]["signals"][win_idx].astype(np.float32))
-                labels.append(int(f[subj]["labels"][win_idx]))
-        logger.info(f"Preloaded {len(signals)} windows into RAM")
-        return signals, labels
+            for subj, entries in subj_ranges.items():
+                sigs = f[subj]["signals"][:]  # read entire subject at once
+                labs = f[subj]["labels"][:]
+                for i, win_idx in entries:
+                    all_signals[i] = sigs[win_idx].astype(np.float32)
+                    all_labels[i] = int(labs[win_idx])
+        logger.info(f"Preloaded {len(all_signals)} windows into RAM")
+        return all_signals, all_labels
 
     def __len__(self) -> int:
         return len(self.index)
