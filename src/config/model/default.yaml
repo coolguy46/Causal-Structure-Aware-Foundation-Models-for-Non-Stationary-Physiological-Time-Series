@@ -30,7 +30,7 @@ transformer:
   d_ff: 2048
   dropout: 0.1
   max_seq_len: 2048
-  gradient_checkpointing: true  # trades compute for VRAM headroom
+  gradient_checkpointing: false  # not needed — per-dataset batch sizes keep VRAM in budget
 
 adapter:
   hidden_dim: 512
