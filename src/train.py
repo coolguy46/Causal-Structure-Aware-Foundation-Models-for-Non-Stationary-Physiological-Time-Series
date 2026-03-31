@@ -313,13 +313,14 @@ def train_one_epoch(
         total_loss_accum += loss_dict["total"]
         n_batches += 1
 
-        its = pbar.format_dict.get("rate", 0) or 0
-        sps = its * batch_size_actual
-        pbar.set_postfix({
-            "loss": f"{loss_dict['total']:.4f}",
-            "task": f"{loss_dict['task']:.4f}",
-            "samp/s": f"{sps:.0f}",
-        })
+        if batch_idx % 25 == 0:
+            its = pbar.format_dict.get("rate", 0) or 0
+            sps = its * batch_size_actual
+            pbar.set_postfix({
+                "loss": f"{loss_dict['total']:.4f}",
+                "task": f"{loss_dict['task']:.4f}",
+                "samp/s": f"{sps:.0f}",
+            })
 
         if wandb.run and batch_idx % 100 == 0:
             wandb.log({"train/" + k: v for k, v in loss_dict.items()})
