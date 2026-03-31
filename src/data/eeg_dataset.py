@@ -60,12 +60,38 @@ class EEGDataset(Dataset):
         else:
             self.signals, self.labels = None, None
             self._h5_path = self.data_dir / "data.h5"
+            # NOTE: do NOT open the file handle here — it must be opened lazily
+            # inside __getitem__ so that each DataLoader worker gets its own
+            # independent handle (see __getstate__).
 
         mode = "preloaded to RAM" if self.preload else "lazy HDF5"
         logger.info(
             f"EEGDataset [{split}]: {len(self.subjects)} subjects, "
             f"{len(self.index)} windows ({mode})"
         )
+
+    # ------------------------------------------------------------------
+    # Multiprocessing safety
+    # ------------------------------------------------------------------
+
+    def __getstate__(self):
+        """Strip the HDF5 file handle before the dataset is pickled into
+        DataLoader worker processes.  Each worker will re-open its own
+        handle on the first __getitem__ call, avoiding the fork-safety
+        deadlock that occurs when a single h5py handle is shared across
+        multiple processes.
+        """
+        state = self.__dict__.copy()
+        state.pop("_h5_handle", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Ensure the attribute exists so __getitem__ can check it safely.
+        if not self.preload:
+            self._h5_handle = None
+
+    # ------------------------------------------------------------------
 
     def _load_split(self, split_file: Optional[str], split: str) -> list[str]:
         if split_file and Path(split_file).exists():
@@ -124,7 +150,9 @@ class EEGDataset(Dataset):
             label = self.labels[idx]
         else:
             subj, win_idx = self.index[idx]
-            # Lazy-open persistent handle per worker (avoids open/close per sample)
+            # Open a fresh handle if this worker doesn't have one yet.
+            # Because __getstate__ strips _h5_handle before forking, every
+            # worker starts with None and opens its own independent connection.
             if not hasattr(self, "_h5_handle") or self._h5_handle is None:
                 self._h5_handle = h5py.File(self._h5_path, "r")
             signal = self._h5_handle[subj]["signals"][win_idx].astype(np.float32)
@@ -137,8 +165,8 @@ class EEGDataset(Dataset):
         label = torch.tensor(label, dtype=torch.long)
 
         sample = {
-            "signal": signal,       # (C, T)
-            "label": label,         # scalar
+            "signal": signal,           # (C, T)
+            "label": label,             # scalar
             "subject_id": self.index[idx][0],
         }
 
