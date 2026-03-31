@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 
 
+@torch.compiler.disable
 def spectral_reconstruction_loss(
     x_hat: torch.Tensor,
     x: torch.Tensor,

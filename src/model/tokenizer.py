@@ -82,6 +82,7 @@ class SpectralTokenizer(nn.Module):
         # STFT window
         self.register_buffer("window", torch.hann_window(win_length))
 
+    @torch.compiler.disable
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
@@ -195,6 +196,7 @@ class TokenDecoder(nn.Module):
 
         self.register_buffer("window", torch.hann_window(win_length))
 
+    @torch.compiler.disable
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         """
         Args:
