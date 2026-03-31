@@ -167,10 +167,12 @@ def causal_consistency_loss(
     embeddings: torch.Tensor,
     transformer_fn,
     tokens: torch.Tensor,
-    n_interventions: int = 5,
+    n_interventions: int = 1,
     intervention_type: str = "zero",
     use_edge_loss: bool = True,
     use_invariance_loss: bool = True,
+    n_edges: int = 1,
+    n_invariance_values: int = 1,
 ) -> torch.Tensor:
     """Full causal consistency loss: L_interv + 0.5 * L_edge + 0.3 * L_invariance."""
     loss = interventional_consistency_loss(
@@ -179,12 +181,12 @@ def causal_consistency_loss(
 
     if use_edge_loss:
         loss = loss + 0.5 * counterfactual_edge_loss(
-            adj, edge_probs, embeddings, transformer_fn, tokens, n_edges=3
+            adj, edge_probs, embeddings, transformer_fn, tokens, n_edges=n_edges
         )
 
     if use_invariance_loss:
         loss = loss + 0.3 * distributional_invariance_loss(
-            adj, embeddings, transformer_fn, tokens, n_interventions=3
+            adj, embeddings, transformer_fn, tokens, n_interventions=n_invariance_values
         )
 
     return loss

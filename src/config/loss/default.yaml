@@ -1,19 +1,20 @@
 lambda_recon: 1.0
 lambda_causal: 0.1
 lambda_task: 1.0
-causal_every_n_steps: 8  # compute expensive causal loss every N steps
+causal_every_n_steps: 16  # compute expensive causal loss every N steps
 
 reconstruction:
   type: mse_spectral  # MSE in STFT domain
 
 causal_consistency:
-  n_interventions: 3  # reduced from 5; batched so still effective
+  n_interventions: 1  # reduced to 1; batched stacking eliminated
   intervention_type: zero  # zero-out node embedding
   use_edge_loss: true  # counterfactual edge necessity
   edge_loss_weight: 0.5
+  n_edges: 1  # number of edges to ablate per step
   use_invariance_loss: true  # distributional invariance (IRM-inspired)
   invariance_loss_weight: 0.3
-  n_invariance_values: 3  # number of intervention values for invariance check
+  n_invariance_values: 1  # number of intervention values for invariance check
 
 task:
   type: cross_entropy

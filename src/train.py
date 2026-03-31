@@ -264,6 +264,8 @@ def train_one_epoch(
                         tokens=tokens,
                         n_interventions=cfg.loss.causal_consistency.n_interventions,
                         intervention_type=cfg.loss.causal_consistency.intervention_type,
+                        n_edges=getattr(cfg.loss.causal_consistency, 'n_edges', 1),
+                        n_invariance_values=getattr(cfg.loss.causal_consistency, 'n_invariance_values', 1),
                     )
                 else:
                     causal_l = torch.tensor(0.0, device=device)
