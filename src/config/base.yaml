@@ -5,7 +5,7 @@ defaults:
   - _self_
 
 seed: 42
-num_workers: 8
+num_workers: 4
 
 train:
   epochs: 60
@@ -36,4 +36,4 @@ hardware:
   gpus: 1
   precision: bf16-mixed  # bf16 native on 5090/A100, faster than fp16
   compile: true  # torch.compile
-  compile_mode: max-autotune
+  compile_mode: reduce-overhead
