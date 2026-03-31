@@ -103,10 +103,7 @@ class EEGDataset(Dataset):
 
         signal = signal.astype(np.float32)
 
-        # Apply bandpass filter
-        signal = self.bandpass(signal)
-
-        # Per-channel z-score
+        # Per-channel z-score (bandpass already applied during preprocessing)
         signal = self.normalize(signal)
 
         signal = torch.from_numpy(signal)

@@ -98,7 +98,7 @@ class ECGDataset(Dataset):
         label = int(f[rec_id]["labels"][win_idx])
 
         signal = signal.astype(np.float32)
-        signal = self.bandpass(signal)
+        # Bandpass already applied during preprocessing
         signal = self.normalize(signal)
 
         signal = torch.from_numpy(signal)
