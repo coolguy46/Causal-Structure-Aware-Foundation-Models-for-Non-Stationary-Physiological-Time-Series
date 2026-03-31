@@ -231,6 +231,7 @@ def train_one_epoch(
         else:
             dtype = torch.float32
 
+        torch.compiler.cudagraph_mark_step_begin()
         with torch.autocast(device_type="cuda", dtype=dtype):
             output = model(signal)
 
