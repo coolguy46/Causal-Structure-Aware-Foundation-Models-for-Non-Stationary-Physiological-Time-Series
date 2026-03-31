@@ -23,8 +23,10 @@ def spectral_reconstruction_loss(
     window = torch.hann_window(n_fft, device=x.device)
 
     # Flatten channels into batch for efficient STFT
-    x_flat = x.reshape(B * C, T)
-    x_hat_flat = x_hat.reshape(B * C, T)
+    # Cast to float32: STFT complex kernels are not supported for bf16
+    # under torch.compile + inductor (same pattern as SpectralTokenizer).
+    x_flat = x.reshape(B * C, T).float()
+    x_hat_flat = x_hat.reshape(B * C, T).float()
 
     spec_target = torch.stft(
         x_flat, n_fft=n_fft, hop_length=hop_length,
