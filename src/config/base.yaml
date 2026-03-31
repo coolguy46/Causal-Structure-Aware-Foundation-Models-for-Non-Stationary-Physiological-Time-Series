@@ -10,7 +10,7 @@ num_workers: 4
 train:
   epochs: 60
   batch_size: 256
-  lr: 1e-3
+  lr: 6e-4
   weight_decay: 1e-5
   warmup_epochs: 5
   max_grad_norm: 1.0

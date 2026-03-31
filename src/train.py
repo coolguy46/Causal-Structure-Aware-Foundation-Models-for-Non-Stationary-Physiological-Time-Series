@@ -326,7 +326,7 @@ def train_one_epoch(
             })
 
         if wandb.run and batch_idx % 100 == 0:
-            wandb.log({"train/" + k: v for k, v in loss_dict.items()})
+            wandb.log({"train/" + k: v for k, v in loss_dict.items()}, commit=False)
 
     gc.enable()
     gc.collect()
@@ -473,7 +473,7 @@ def main(cfg: DictConfig):
         logger.info(f"Val: {val_metrics}")
 
         if wandb.run:
-            wandb.log({"val/" + k: v for k, v in val_metrics.items()}, step=epoch)
+            wandb.log({**{"val/" + k: v for k, v in val_metrics.items()}, "epoch": epoch})
 
         # Checkpointing
         val_f1 = val_metrics.get("f1_macro", 0.0)
