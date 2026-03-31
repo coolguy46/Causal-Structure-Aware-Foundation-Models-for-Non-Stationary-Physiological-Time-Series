@@ -94,10 +94,10 @@ def counterfactual_edge_loss(
     B, N, d = embeddings.shape
     device = embeddings.device
 
-    probs_flat = edge_probs.reshape(B, -1)
+    probs_flat = edge_probs.reshape(B, -1).float()
 
-    # Sample edges to ablate
-    sample_indices = torch.multinomial(probs_flat + 1e-8, n_edges)  # (B, K)
+    # Sample edges to ablate (float32 required for multinomial)
+    sample_indices = torch.multinomial(probs_flat + 1e-6, n_edges)  # (B, K)
     src = sample_indices // N  # (B, K)
     tgt = sample_indices % N   # (B, K)
 
