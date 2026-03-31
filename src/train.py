@@ -321,7 +321,7 @@ def train_one_epoch(
             "samp/s": f"{sps:.0f}",
         })
 
-        if wandb.run:
+        if wandb.run and batch_idx % 10 == 0:
             wandb.log({"train/" + k: v for k, v in loss_dict.items()})
 
     return {"avg_loss": total_loss_accum / max(n_batches, 1)}
